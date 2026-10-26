@@ -43,6 +43,9 @@
 	</array>
 	<key>UIViewControllerBasedStatusBarAppearance</key>
 	<true/>
+	<!-- v0.18: HTTPS only, so TestFlight uploads skip the export-compliance question. -->
+	<key>ITSAppUsesNonExemptEncryption</key>
+	<false/>
 	<!-- v0.17 AdMob: Google's TEST app id. Replace with the iOS app id from the AdMob console before release (docs/23-ADS-AND-UNLOCK.md). -->
 	<key>GADApplicationIdentifier</key>
 	<string>ca-app-pub-3940256099942544~1458002511</string>

@@ -1,6 +1,6 @@
 {
   "name": "dawnwick",
-  "version": "0.17.0",
+  "version": "0.18.0",
   "private": true,
   "description": "Dawnwick: The Last Word, a phone-first counter-chain roguelike deckbuilder.",
   "type": "module",
@@ -10,7 +10,7 @@
     "build:single": "vite build --mode single",
     "preview": "vite preview --host",
     "typecheck": "tsc --noEmit",
-    "test": "tsx sim/tests.ts && tsx sim/story-tests.ts && tsx sim/ads-tests.ts",
+    "test": "tsx sim/tests.ts && tsx sim/story-tests.ts && tsx sim/ads-tests.ts && tsx sim/feedback-tests.ts",
     "sim": "tsx sim/simulate.ts",
     "cap:sync": "npm run build && cap sync",
     "cap:ios": "npm run build && cap sync ios && cap open ios",

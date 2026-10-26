@@ -1,0 +1,51 @@
+# v0.18: a debug APK for playtesters on every push to main (and on demand from the Actions tab).
+# Debug builds are signed with Android's throwaway debug key: fine for sideloading to testers, not for Play.
+name: Android debug APK
+
+on:
+  push:
+    branches: [main]
+    paths: ['riposte/**', '.github/workflows/android-apk.yml']
+  workflow_dispatch:
+
+jobs:
+  apk:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    defaults:
+      run:
+        working-directory: riposte
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: riposte/package-lock.json
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+      - name: Install
+        run: npm ci
+      - name: Test
+        run: npm test
+      - name: Build web app
+        run: npm run build
+      - name: Copy into the Android project
+        run: npx cap sync android
+      - name: Build debug APK
+        working-directory: riposte/android
+        run: chmod +x gradlew && ./gradlew assembleDebug --no-daemon --stacktrace
+      - name: Name the APK after the version
+        id: name
+        run: |
+          v=$(node -p "require('./package.json').version")
+          cp android/app/build/outputs/apk/debug/app-debug.apk "dawnwick-$v-debug.apk"
+          echo "file=dawnwick-$v-debug.apk" >> "$GITHUB_OUTPUT"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ steps.name.outputs.file }}
+          path: riposte/${{ steps.name.outputs.file }}
+          retention-days: 30
+          if-no-files-found: error
