@@ -48,6 +48,9 @@ export const COSMETICS: Cosmetic[] = [
   { id: 'title_sexton', kind: 'title', name: 'Keeper of the Crypt', icon: '⚰️', text: '' },
   { id: 'title_nemesis', kind: 'title', name: 'Grudge Settled', icon: '☠️', text: '' },
   { id: 'title_night', kind: 'title', name: 'Dawnbreaker', icon: '🌅', text: '' },
+  // v0.17: the Last Word Edition (the one-time purchase that removes ads)
+  { id: 'back_lastword', kind: 'back', name: 'The Last Word', icon: '🕯', text: 'Black lacquer, a gold candle, the Dealer\'s seal.' },
+  { id: 'title_lastword', kind: 'title', name: 'Keeper of the Last Word', icon: '🕯', text: '' },
 ];
 export const COSMETIC_MAP = Object.fromEntries(COSMETICS.map((c) => [c.id, c]));
 export const DEFAULT_COSMETICS = ['back_classic', 'title_novice'];

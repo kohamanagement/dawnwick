@@ -19,6 +19,7 @@ import * as audio from './audio';
 import { FACTION_GLYPH, FACTION_NAME, RARITY_NAME, cardHtml, esc, keywordList, relicRow, upgradeLines } from './render';
 import { eventsBadge, vowsPanel } from './events';
 import { ENEMIES } from '../data/enemies';
+import { cutReady, offersVisible, EDITION_COSMETICS } from '../ads/policy';
 import { COSMETICS, COSMETIC_MAP, MASTERY, MASTERY_NAMES, SEASON_TRACK, masteryLevel } from '../data/season';
 import { heatOf } from '../data/vows';
 
@@ -74,7 +75,7 @@ export function viewTitle(): string {
   const embers = Array.from({ length: 14 }, (_, i) => `<i style="--x:${(i * 37) % 100}%;--d:${4 + (i % 5)}s;--delay:${(i * 0.7) % 5}s"></i>`).join('');
   return hubShell('title', `<div class="title">
     <div class="embers" aria-hidden="true">${embers}</div>
-    <div class="logo"><div class="logo-mark"><span>⚔</span><span>⟲</span></div><h1>DAWNWICK</h1><p class="sub">The Last Word</p><p class="tag">Every move has an answer.</p></div>
+    <div class="logo"><div class="logo-mark"><span>⚔</span><span>⟲</span></div><h1>DAWNWICK</h1><p class="sub">The Last Word</p><p class="tag">Every move has an answer.</p>${pr.ads.owned ? '<div class="goldwick" title="Last Word Edition"><b>🕯</b><small>Last Word Edition</small></div>' : ''}</div>
     <div class="menu">
       ${app.run ? `<button class="btn primary" data-a="continue">Continue run<small>${esc(CHARACTERS[app.run.character].name)} · Act ${app.run.act} · ${app.run.floor ? `Floor ${app.run.floor}` : 'start'} · ❤ ${app.run.hp}/${app.run.maxHp}</small></button>` : ''}
       <button class="btn ${app.run ? '' : 'primary'} big-cta" data-a="newRun">New run</button>
@@ -305,6 +306,7 @@ export function viewStore(): string {
   const inv = Object.entries(pr.packs).filter(([, n]) => n > 0);
   return hubShell('store', `<div class="scroll">
     ${eco.giftReady(pr) ? `<button class="gift" data-a="gift"><span>🎁</span><b>Daily gift ready</b><small>Claim a free Duelist Pack</small></button>` : ''}
+    ${cutReady(pr.ads, pr.giftDay, todayKey()) && offersVisible(pr.ads) ? `<button class="gift cut" data-a="dealerCut"><span>🂠</span><b>The Dealer's Cut</b><small>${pr.ads.owned ? 'Last Word Edition: a second free Duelist Pack today' : '"Watch a word from the house, and I\'ll cut you in." A second free Duelist Pack today'}</small>${pr.ads.owned ? '' : '<i class="adpill">Ad</i>'}</button>` : ''}
     ${inv.length ? `<h3>Your packs</h3><div class="packrow">${inv.map(([id, n]) => `<button class="pack" data-a="openPack" data-id="${id}" style="--hue:${PACKS[id].hue}">${packSvg(PACKS[id].hue, PACKS[id].icon, PACKS[id].name)}<span class="pcount">×${n}</span><b>Open</b></button>`).join('')}</div>` : ''}
     <h3>Booster packs</h3>
     <p class="muted small">Bought with Coins you earn in runs, quests and achievements. A Legendary is guaranteed within ${PITY} packs (${PITY - pr.pity} to go).</p>
@@ -625,7 +627,7 @@ export const hubActions: Record<string, H> = {
     const id = el.dataset.id!;
     const tier = SEASON_TRACK.findIndex((t) => t.cosmetic === id);
     const ach = ACHIEVEMENTS.find((a) => a.reward.cosmetic === id);
-    ui.toast(`🔒 ${esc(COSMETIC_MAP[id]?.name ?? '')}: ${tier >= 0 ? `Season track, tier ${tier + 1}` : ach ? `trophy “${esc(ach.name)}” (${esc(ach.text)})` : 'an Arena or event reward'}.`);
+    ui.toast(`🔒 ${esc(COSMETIC_MAP[id]?.name ?? '')}: ${EDITION_COSMETICS.includes(id) ? 'the Last Word Edition (Settings)' : tier >= 0 ? `Season track, tier ${tier + 1}` : ach ? `trophy “${esc(ach.name)}” (${esc(ach.text)})` : 'an Arena or event reward'}.`);
   },
   equip: (el) => { if (eco.equip(p(), el.dataset.id!)) { document.body.dataset.back = p().cosmetics.back; refresh(); } },
   beast: (el) => {

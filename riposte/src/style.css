@@ -1091,3 +1091,46 @@ h3 .link { text-transform: none; letter-spacing: 0; margin-left: 6px; font-famil
 .slamring { position: fixed; width: 20px; height: 20px; margin: -10px 0 0 -10px; border-radius: 50%; border: 3px solid rgba(232,176,74,.9); pointer-events: none; z-index: 35; animation: slamRing .42s ease-out forwards; }
 .slamring.atk { border-color: rgba(255,140,90,.95); border-width: 4px; }
 @keyframes slamRing { to { transform: scale(6); opacity: 0; border-width: 1px; } }
+
+/* ───────── v0.17: ads, the Dealer's favors and the Last Word Edition ───────── */
+.adpill { font-style: normal; font-size: .7em; font-weight: 700; letter-spacing: .04em; padding: 1px 6px; border-radius: 6px; background: #3a3350; color: var(--ink2); border: 1px solid var(--line); }
+.adpill.own { background: #4a3510; color: var(--gold); border-color: var(--gold); }
+.gift.cut { background: linear-gradient(90deg, #2c1f3f, #1f1a2b); border-color: #a56ee0; animation: none; grid-template-columns: auto 1fr auto; }
+.gift.cut b, .gift.cut small { grid-column: 2; }
+.gift.cut .adpill { grid-column: 3; grid-row: 1 / span 2; align-self: center; }
+.favors { margin: 10px 0; padding: 10px; border: 1px dashed #6b5a8f; border-radius: var(--radius); background: rgba(165, 110, 224, .07); }
+.favorline { margin: 0 0 8px; font-style: italic; color: var(--ink2); font-size: .9em; }
+.btn.favor { width: 100%; display: grid; grid-template-columns: 1fr auto; text-align: left; gap: 2px 8px; margin: 4px 0; }
+.btn.favor small { grid-column: 1; }
+.btn.favor .adpill { grid-column: 2; grid-row: 1 / span 2; align-self: center; }
+.goldwick { display: inline-flex; flex-direction: column; align-items: center; gap: 2px; color: var(--gold); }
+.goldwick b { font-weight: normal; filter: sepia(1) saturate(2.6) brightness(1.05) drop-shadow(0 0 6px rgba(242, 201, 76, .7)); }
+.goldwick small { font-size: .62em; letter-spacing: .14em; text-transform: uppercase; color: #c9a35a; }
+.logo .goldwick { margin-top: 6px; font-size: 1.6em; }
+.goldwick.big { font-size: 3em; }
+.edition { flex-shrink: 0; width: 100%; margin: 12px 0; padding: 12px; border-radius: var(--radius); border: 1px solid var(--gold); background: linear-gradient(160deg, #2d2512, #1d1a29 70%); text-align: left; }
+.edition .edhead { display: flex; gap: 10px; align-items: center; }
+.edition .edhead .goldwick { font-size: 1.8em; }
+.edition .edhead small { display: block; color: var(--ink2); }
+.edition ul { margin: 8px 0; padding-left: 18px; font-size: .9em; }
+.edition li { margin: 2px 0; }
+body[data-back="back_lastword"] .pull .back { background: radial-gradient(circle at 50% 40%, #4a3510 0 12%, #120f18 13% 60%, #0a0810); border-color: #f2c94c; }
+body[data-back="back_lastword"] .pile[data-p="draw"] { border: 1px solid #f2c94c; }
+
+/* The web stand-in ad: a card from the Dealer with a 5-second countdown. */
+.mockad { position: fixed; inset: 0; z-index: 100; display: flex; align-items: center; justify-content: center; padding: 16px; background: rgba(8, 6, 12, .92); }
+.mockad-card { width: 100%; max-width: 360px; padding: 20px; border-radius: 16px; border: 2px solid var(--gold); background: radial-gradient(circle at 50% 20%, #2d2512, var(--bg2) 70%); text-align: center; font-family: var(--body); color: var(--ink); }
+.mockad-kicker { font-family: var(--display); color: var(--gold); letter-spacing: .1em; text-transform: uppercase; font-size: .85em; }
+.mockad-candle { width: 14px; height: 40px; margin: 14px auto 8px; border-radius: 3px; background: linear-gradient(#f3ead7, #c9b98f); position: relative; }
+.mockad-candle i { position: absolute; left: 50%; top: -18px; width: 12px; height: 18px; margin-left: -6px; border-radius: 50% 50% 40% 40%; background: radial-gradient(circle at 50% 70%, #fff3b0, #e8743b 70%); animation: mockFlame .5s ease-in-out infinite alternate; }
+@keyframes mockFlame { to { transform: scaleY(1.2) translateY(-1px); } }
+.mockad-line { font-style: italic; color: var(--ink2); }
+.mockad-slot { margin: 12px 0; padding: 22px 10px; border: 1px dashed var(--line); border-radius: 10px; background: #14121c; }
+.mockad-slot b { display: block; font-size: 1.2em; }
+.mockad-slot small { color: var(--muted); }
+.mockad-bar { height: 4px; border-radius: 2px; background: var(--line); overflow: hidden; }
+.mockad-bar i { display: block; height: 100%; width: 100%; background: var(--gold); transform-origin: left; animation: mockBar linear forwards; }
+@keyframes mockBar { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+.mockad-row { display: flex; gap: 8px; justify-content: space-between; margin-top: 12px; }
+.mockad-row .btn { flex: 1; }
+.reduce-motion .mockad-candle i { animation: none; }

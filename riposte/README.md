@@ -15,7 +15,11 @@ _Formerly **Riposte** (renamed in v0.14.1 because the name was taken; the projec
   1. **The Answer Chain:** traps and Reactions answer each other, up to 6 links, LIFO; *Chain N* cards reward baiting.
   2. **Visible-trigger traps:** you always see *what* sets an enemy trap off (⚔ ✋ ⟲), never *which* trap it is; every enemy lists its possible traps.
   3. **Legacy → Echo:** your best run decks become ghost opponents (offline now, other players' decks once a server exists).
-- **Business:** free Act 1 demo → $6.99 one-time unlock, $3.99 expansions, cosmetics only; no loot boxes or energy. See [docs/03-MOBILE-BUSINESS-AND-BUILD-PLAN.md](docs/03-MOBILE-BUSINESS-AND-BUILD-PLAN.md).
+- **Business (v0.17):** free with ads; a one-time **$4.99 Last Word Edition** removes them, gives every Dealer's favor without an ad and adds a gold candle. No gacha, battle pass or energy. See [docs/23-ADS-AND-UNLOCK.md](docs/23-ADS-AND-UNLOCK.md).
+
+## New in v0.17 "The House Takes a Cut"
+
+Dawnwick is now free with ads, and $4.99 once removes them. One short "Intermission" can play after a run's results (never in a fight), at most once per run and once every 5 minutes, and not before your first Act 1 boss clear or your third run. Seven optional **Dealer's favors** pay for a rewarded ad, each capped and never in Daily or Weekly runs: Second Look (two cards from one Deal), Ante Up (double a fight's gold), Fresh Stock and Up His Sleeve at the Merchant, Relight Wick at the Candle, One More Hand when you die, and Another Fate; plus the Dealer's Cut, a second free daily pack. The **Last Word Edition** removes the ads, gives every favor free and adds a gold candle, a card back and a title. The web build uses a 5-second stand-in ad and a pretend purchase; the apps use AdMob (with GDPR consent and the iOS tracking prompt) and RevenueCat. Design, caps and the store setup steps: [docs/23-ADS-AND-UNLOCK.md](docs/23-ADS-AND-UNLOCK.md).
 
 ## New in v0.16 "Every Action Sounds"
 
@@ -227,6 +231,7 @@ npm run cap:ios      # builds, syncs into ios/, opens Xcode (macOS only) → Run
 | `src/engine/meta.ts` | Profile, XP/levels, unlocks, Ascension, daily seeds, Legacy decks, storage |
 | `src/engine/economy.ts` | Coins/Dust, collection, packs, gamble, crafting, sigil imprints, market, quests, talents, loadouts, trophies |
 | `src/engine/puzzle.ts` | Riddles of the Chain: builds a one-turn puzzle fight and judges it |
+| `src/engine/favors.ts`, `src/ads/` | v0.17: the Dealer's favors (rewarded-ad extras, capped) and the ads/purchase layer: pure rules in `policy.ts`, adapter interfaces, the web stand-in, AdMob + RevenueCat in `native.ts` |
 | `src/engine/arena.ts` | Arena draft, rival generation, duels, spoils, deck codes |
 | `src/engine/rng.ts` | Seeded, serializable RNG streams (daily fairness, replay anti-cheat) |
 | `src/data/venues.ts`, `src/data/patrons.ts` | The 16 Venues (rules as data + hooks) and the 5 Patrons with their blessings |

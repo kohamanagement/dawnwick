@@ -50,6 +50,10 @@ import { OMENS, omenCap } from './data/omens';
 import { ACT_NAMES } from './data/enemies';
 import { COSMETIC_MAP } from './data/season';
 import { TWIST_MAP } from './data/vows';
+import { FAVORS, favorReady, grantFavor, type FavorId } from './engine/favors';
+import * as monet from './ads';
+import type { AdResult } from './ads/adapter';
+import { EDITION, EDITION_COSMETICS, AD_RULES, cutReady, offersVisible, pitchDue } from './ads/policy';
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 const speed = () => (app.profile.settings.turbo ? 0.25 : app.profile.settings.fast ? 0.5 : 1) * (app.profile.settings.reduceMotion ? 0.6 : 1);
@@ -673,6 +677,7 @@ function viewReward(r: RunState): string {
     ${relicChoices}
     ${answer}
     ${cards}
+    ${favorRow(r, ['second_look', 'ante_up'])}
     <button class="btn wide ${w.cards || w.relicChoices || w.answer ? 'ghost' : 'primary'}" data-a="proceed">${w.cards ? 'Skip the card and continue' : w.relicChoices ? 'Skip the keepsake and continue' : 'Continue'}</button>
   </div>`;
 }
@@ -700,6 +705,7 @@ function viewShop(r: RunState): string {
     <h3>Services</h3>
     <button class="btn" data-a="shopRemove" ${s.removed || r.gold < Math.round(s.removePrice / 2) ? 'disabled' : ''}>✂ Remove a card · 💰 ${s.removePrice}${s.removed ? ' (used)' : ''}<small>Jinxes go for half (💰 ${Math.round(s.removePrice / 2)}). Each removal costs ${30} more.</small></button>
     ${(r.debts ?? []).map((d, i) => { const pt = PATRON_MAP[d.patron]; return `<button class="btn" data-a="payDebt" data-i="${i}" ${r.gold < DEBT_PRICE ? 'disabled' : ''}>${pt?.icon ?? '🎭'} Pay off ${esc(pt?.name ?? 'a Patron')}'s debt · 💰 ${DEBT_PRICE}<small>Otherwise ${esc(pt?.name ?? 'the Patron')} sits in on the Act ${d.act} boss: it starts with an extra ${esc(CARDS[d.trap]?.name ?? 'trap')} set.</small></button>`; }).join('')}
+    ${favorRow(r, ['restock', 'sleeve'])}
     <button class="btn primary wide" data-a="proceed">Leave shop</button>
   </div>`;
 }
@@ -721,6 +727,7 @@ function viewRest(r: RunState): string {
       <button class="btn big ${!heal && canSmith ? 'primary' : ''}" data-a="restUpgrade" ${canSmith ? '' : 'disabled'}>⚒ Hone<small>${canSmith ? 'Upgrade a card (path A or B)' : r.fate === 'ascetic' ? 'The Ascetic never hones' : 'Every card is already upgraded'}</small></button>
       <button class="btn big" data-a="restRehearse" ${reactions.length ? '' : 'disabled'}>🎭 Rehearse<small>${reactions.length ? 'Pick a Reaction: a copy starts your next fight already set' : 'You have no Reactions to rehearse'}</small></button>
       <button class="btn big" data-a="restScout">🔭 Scout<small>Flip ${downs ? `the ${downs} face-down card${downs > 1 ? 's' : ''} left` : 'every face-down card'} in this act, and see your next Rival's traps</small></button>`}
+    ${favorRow(r, ['relight'])}
     <button class="btn ${r.restDone ? 'primary' : 'ghost'} wide" data-a="proceed">${r.restDone ? 'Continue' : 'Leave'}</button>
   </div>`;
 }
@@ -802,9 +809,92 @@ function viewFate(r: RunState): string {
     <h2>Choose your Fate</h2>
     <p class="flavor">Three cards turn over on a table at the start of the road. Each is a life you could lead. Keep one, or walk your own path.</p>
     <div class="fates">${offers.map((id) => { const f = FATE_MAP[id]; return `<button class="btn choice fatecard" data-a="fatePick" data-id="${id}"><span class="fateicon">${f.icon}</span><b>${esc(f.name)}</b><small>${esc(f.text)}</small></button>`; }).join('')}</div>
+    ${favorRow(r, ['refate'])}
     <button class="btn ghost wide" data-a="fatePick" data-id="">Walk your own path (no Fate)</button>
   </div>`;
 }
+
+// ───────── v0.17: the Dealer's favors (optional rewarded ads) ─────────
+
+/** A row of favor buttons for this screen, or nothing when none fits (or offers are hidden). */
+function favorRow(r: RunState, ids: FavorId[]): string {
+  if (!offersVisible(app.profile.ads)) return '';
+  const ready = ids.filter((id) => favorReady(r, id));
+  if (!ready.length) return '';
+  const owned = app.profile.ads.owned;
+  return `<div class="favors"><p class="favorline">The Dealer leans in: "${esc(FAVORS[ready[0]].line)}"</p>
+    ${ready.map((id) => { const f = FAVORS[id]; return `<button class="btn favor" data-a="favor" data-id="${id}"><span>${f.icon} <b>${esc(f.name)}</b></span><small>${esc(f.text)}</small><i class="adpill ${owned ? 'own' : ''}">${owned ? 'Free' : 'Ad'}</i></button>`; }).join('')}
+  </div>`;
+}
+
+const AD_FAIL: Record<Exclude<AdResult, 'rewarded'>, string> = {
+  closed: 'You skipped the ad, so the Dealer keeps his favor. Ask again any time.',
+  offline: 'The Dealer\'s line is down: you are offline. Try again when you are connected.',
+  failed: 'No ad was ready. Try again in a minute.',
+  unavailable: 'Ads are not available right now. Try again in a minute.',
+};
+const FAVOR_SFX: Record<FavorId, audio.Sfx> = { second_look: 'deal', ante_up: 'gold', restock: 'shopBell', sleeve: 'omen', relight: 'campfire', last_hand: 'heal', refate: 'fate' };
+
+/** Watch a rewarded ad (or skip it with the Edition) and hand over the favor. */
+async function useFavor(id: FavorId): Promise<boolean> {
+  const r = app.run;
+  if (!r || app.busy || !favorReady(r, id)) return false;
+  app.busy = true;
+  const res = await monet.watch(id);
+  app.busy = false;
+  if (res !== 'rewarded') { toast(AD_FAIL[res], 'warn'); render(); return false; }
+  const msg = grantFavor(r, id);
+  if (msg) { toast(`${FAVORS[id].icon} ${esc(msg)}`, 'good'); audio.sfx(FAVOR_SFX[id]); }
+  persist();
+  render();
+  return !!msg;
+}
+
+/** v0.17: the Edition's cosmetics follow ownership (bought, restored, or confirmed by the store at launch). */
+function grantEdition(): void {
+  const c = app.profile.cosmetics;
+  if (!app.profile.ads.owned) return;
+  for (const id of EDITION_COSMETICS) if (!c.owned.includes(id)) c.owned.push(id);
+}
+
+async function buyEdition(): Promise<void> {
+  if (app.busy) return;
+  app.busy = true;
+  toast('Opening the store…');
+  const r = await monet.buy();
+  app.busy = false;
+  if (r === 'owned') {
+    grantEdition();
+    persist();
+    audio.sfx('legend');
+    modal(`<div class="big-emoji goldwick big"><b>🕯</b></div><h2>The Last Word is yours</h2><p>"A pleasure doing business." No more intermissions, every favor on the house, and the Dealer's Cut each day.</p><p class="muted small">The Last Word card back and the title "Keeper of the Last Word" are in Profile, Looks.${monet.backend().real ? '' : ' This web build only pretends: no money moved, and it is remembered in this browser.'}</p>`);
+    return;
+  }
+  toast({ cancelled: 'Purchase cancelled. Nothing was charged.', pending: 'The purchase is pending (waiting for approval). It unlocks as soon as the store confirms it.', failed: 'The store could not complete the purchase. Nothing was charged.', offline: 'You are offline. Connect to buy, and the Edition then works offline for good.' }[r], 'warn');
+  render();
+}
+
+async function restoreEdition(): Promise<void> {
+  if (app.busy) return;
+  app.busy = true;
+  const r = await monet.restore();
+  app.busy = false;
+  if (r === 'owned') { grantEdition(); persist(); toast('🕯 Last Word Edition restored.', 'good'); }
+  else toast({ none: 'No Last Word Edition purchase was found for this store account.', failed: 'The store could not be reached. Try again later.', offline: 'You are offline. Connect to restore your purchase.' }[r], 'warn');
+  render();
+}
+
+/** The Edition's sales card, in the Dealer's voice (results screen and Settings). */
+function editionCard(where: 'end' | 'settings'): string {
+  const price = monet.localPrice() ?? EDITION.price;
+  return `<div class="edition ${where}">
+    <div class="edhead"><span class="goldwick"><b>🕯</b></span><div><b>${EDITION.name}</b><small>One purchase, ${esc(price)}. No subscription, no gacha.</small></div></div>
+    ${where === 'end' ? '<p class="flavor small">"You beat my first table. Most don\'t. Here is an offer I make once: the house\'s own edition."</p>' : ''}
+    <ul>${EDITION.perks.map((x) => `<li>${esc(x)}</li>`).join('')}</ul>
+    <div class="row2"><button class="btn primary" data-a="buyEdition">Buy for ${esc(price)}</button>${where === 'end' ? '<button class="btn ghost" data-a="dismissPitch">Not now</button>' : '<button class="btn ghost" data-a="restoreEdition">Restore purchase</button>'}</div>
+  </div>`;
+}
+let endPitch = false;
 
 // ───────── end of run ─────────
 
@@ -869,11 +959,29 @@ function viewEnd(): string {
       ? '<p class="ok">Deck minted. It will return as an Echo rival in future runs.</p>'
       : '<button class="btn primary" data-a="mint">🪞 Mint this deck as a Legacy<small>It returns as an Echo rival to fight</small></button>')
       : '<p class="muted">Beat an act boss to mint your deck as a Legacy.</p>'}
+    ${endPitch && !app.profile.ads.owned ? editionCard('end') : ''}
     <div class="row2"><button class="btn primary" data-a="endLeave" data-v="chars">Play again</button><button class="btn" data-a="endLeave" data-v="title">Back to hub</button></div>
   </div>`;
 }
 
 // ───────── settings / how to ─────────
+
+function settingsAds(): string {
+  const a = app.profile.ads;
+  const b = monet.backend();
+  const graceLeft = Math.max(0, AD_RULES.graceRuns - app.profile.runs);
+  const status = a.owned
+    ? `<p class="ok">🕯 <b>${EDITION.name}: owned.</b> No ads, every favor free, the Dealer's Cut daily. Thank you.</p>`
+    : `<p class="small">Dawnwick is free with ads. One short ad can play after a run's results (never in a fight, never in a chain), at most one per run and one every ${AD_RULES.gapMs / 60000} minutes, and not if you watched one for a favor that run.${!a.act1 && graceLeft ? ` Your next ${graceLeft} run${graceLeft > 1 ? 's' : ''}, or until you beat your first Act 1 boss, have none.` : ''} The Dealer's favors are always optional.</p>`;
+  return `<h3>Ads and the ${EDITION.name}</h3>
+      ${status}
+      ${a.owned ? '' : editionCard('settings')}
+      ${a.owned ? '<button class="btn ghost" data-a="restoreEdition">Restore purchase</button>' : ''}
+      <label class="toggle"><span>Reduce distraction (younger players)</span><input type="checkbox" data-a="adsQuiet" ${a.quiet ? 'checked' : ''}></label>
+      <p class="muted small">Hides the optional ad offers and asks for family-safe ads only (from the next launch). End-of-run ads keep their limits.</p>
+      ${b.real ? `<button class="btn ghost" data-a="privacyChoices">Privacy choices (ads consent)</button><p class="muted small">Ads: ${a.consent === 'full' ? 'personalized (you agreed)' : a.consent === 'limited' ? 'non-personalized' : 'consent not asked yet'}.</p>` : ''}
+      <p class="muted small">${b.real ? `Ads by ${esc(b.ads)}, purchase by ${esc(b.store)}.` : 'This web build shows a 5-second stand-in instead of a real ad, and the purchase is pretend (no money moves).'} Ads watched: ${a.rewarded} for favors, ${a.interstitials} between runs.</p>`;
+}
 
 function viewSettings(): string {
   const s = app.profile.settings;
@@ -901,6 +1009,7 @@ function viewSettings(): string {
       <label class="toggle"><span>Play with the iPhone silent switch on</span><input type="checkbox" data-a="audioToggle" data-k="ignoreSilent" ${s.ignoreSilent ? 'checked' : ''}></label>
       <p class="muted small">All sound is synthesized live, so the game stays one small file. Each act has its own theme, fights add drums and bass, and bosses get a darker variant. Each chain link plays the next note of a scale.${audio.nowPlaying() ? ` Now playing: <i>${esc(audio.nowPlaying())}</i>.` : ''}</p>
       <p class="muted">Factions always carry a shape so color is never the only cue: ${Object.keys(FACTION_GLYPH).filter((f) => f !== 'enemy' && f !== 'curse').map((f) => `${FACTION_GLYPH[f]} ${FACTION_NAME[f]}`).join(', ')}.</p>
+      ${settingsAds()}
       <h3>Help</h3>
       <button class="btn ghost" data-a="replayTips">Replay tutorial tips</button>
       <p class="muted small">On a keyboard: 1–9 inspects a card in hand (press again to play it), E ends your turn, Esc closes popups.</p>
@@ -1237,6 +1346,29 @@ async function checkCombatEnd(): Promise<void> {
   await sleep(800 * speed());
   if (r.arena) { endDuel(); return; }
   if (s.tutorial) app.profile.tutorialDone = true;
+  // v0.17 One More Hand: before the run ends, the Dealer may offer to deal you back in (a rewarded ad, once per run).
+  if (s.phase === 'lost' && favorReady(r, 'last_hand') && offersVisible(app.profile.ads)) { app.busy = false; offerLastHand(); return; }
+  concludeCombat();
+}
+
+let lastHandOpen = false;
+function offerLastHand(): void {
+  const f = FAVORS.last_hand;
+  const owned = app.profile.ads.owned;
+  lastHandOpen = true;
+  // A confirmFn hides the generic Close button: the two choices below are the only ways out (the backdrop lets it end).
+  app.confirmFn = () => concludeCombat();
+  app.modal = `<div class="big-emoji">🂠</div><h2>${esc(f.name)}</h2><p class="flavor">The Dealer stops your hand before it folds. "${esc(f.line)}"</p>
+    <p>${esc(f.text)} Once per run.</p>
+    <button class="btn primary wide" data-a="lastHand" data-n="1">${owned ? 'Deal me back in (Last Word Edition)' : 'Watch an ad: deal me back in'}</button>
+    <button class="btn ghost wide" data-a="lastHand" data-n="0">Let it end</button>`;
+  persist();
+  render();
+}
+
+function concludeCombat(): void {
+  const r = app.run!;
+  lastHandOpen = false;
   finishCombat(r);
   // v0.11: Evolve news.
   for (const m of r.evolved ?? []) toast(`🦋 ${esc(m)}`, 'good');
@@ -1385,6 +1517,12 @@ function abandonCurrent(): void {
 function endRun(): void {
   const r = app.run!;
   app.result = eco.finishRun(app.profile, r);
+  // v0.17: the first Act 1 boss clear ends the ad-free start, and is when the Dealer first offers his Edition.
+  const a = app.profile.ads;
+  const cleared = r.stats.bosses >= 1;
+  endPitch = pitchDue(a, app.profile.runs, cleared);
+  if (endPitch) a.pitchedAt = app.profile.runs;
+  if (cleared) a.act1 = true;
   audio.sfx(r.won ? 'runWin' : 'runLose');
   app.endRun = r;
   app.minted = false;
@@ -1461,12 +1599,47 @@ const actions: Record<string, Handler> = {
   },
   endLeave: (el) => {
     // v0.10: leaving the results screen with souvenir picks unspent silently forfeited them.
-    const go = () => { if (el.dataset.v === 'chars') void actions.newRun(el); else { app.view = 'title'; render(); } };
+    const go = async () => {
+      // v0.17: the end-of-run ad plays here, after the recap, as you leave the results (caps in src/ads/policy.ts).
+      const er = app.endRun;
+      if (er && !app.busy) {
+        app.busy = true;
+        await monet.intermission({ runs: app.profile.runs, runSeed: er.seed, watchedThisRun: er.favors?.total ?? 0 });
+        app.busy = false;
+      }
+      endPitch = false;
+      if (el.dataset.v === 'chars') void actions.newRun(el); else { app.view = 'title'; render(); }
+    };
     const r = app.endRun, res = app.result;
     const left = r && res && res.keep && eco.souvenirOptions(r).length ? res.keep - app.kept.length : 0;
-    if (left > 0) ask(`You have ${left} souvenir pick${left > 1 ? 's' : ''} left. Leave without keeping ${left > 1 ? 'them' : 'it'}?`, 'Leave anyway', go); else go();
+    if (left > 0) ask(`You have ${left} souvenir pick${left > 1 ? 's' : ''} left. Leave without keeping ${left > 1 ? 'them' : 'it'}?`, 'Leave anyway', () => void go()); else void go();
   },
-  closeModal: () => { app.modal = null; app.confirmFn = null; render(); },
+  closeModal: () => { app.modal = null; app.confirmFn = null; if (lastHandOpen) { concludeCombat(); return; } render(); },
+  // v0.17 ads and the Last Word Edition
+  favor: (el) => { void useFavor(el.dataset.id as FavorId); },
+  lastHand: async (el) => {
+    if (el.dataset.n !== '1') { app.modal = null; app.confirmFn = null; concludeCombat(); return; }
+    if (await useFavor('last_hand')) { lastHandOpen = false; app.modal = null; app.confirmFn = null; render(); }
+  },
+  dealerCut: async () => {
+    const p = app.profile;
+    if (app.busy || !cutReady(p.ads, p.giftDay, todayKey())) return;
+    app.busy = true;
+    const res = await monet.watch('dealers_cut');
+    app.busy = false;
+    if (res !== 'rewarded') { toast(AD_FAIL[res], 'warn'); render(); return; }
+    p.ads.cutDay = todayKey();
+    p.packs.standard = (p.packs.standard ?? 0) + 1;
+    audio.sfx('pack');
+    toast('🂠 The Dealer\'s Cut: a second Duelist Pack is yours today.', 'good');
+    persist();
+    render();
+  },
+  buyEdition: () => { void buyEdition(); },
+  restoreEdition: () => { void restoreEdition(); },
+  dismissPitch: () => { endPitch = false; render(); },
+  privacyChoices: () => { void monet.privacyChoices(); },
+  adsQuiet: (el) => { app.profile.ads.quiet = (el as HTMLInputElement).checked; persist(); render(); },
   confirmYes: () => { const fn = app.confirmFn; app.modal = null; app.confirmFn = null; fn?.(); render(); },
   coachOk: () => { app.profile.seen[app.view] = true; persist(); render(); },
   continue: () => { app.view = 'run'; render(); },
@@ -2116,7 +2289,11 @@ function welcome(): void {
 
 applySettings();
 resumeIfNeeded();
+grantEdition();
 render();
 welcome();
+// v0.17: ads and the store start after the first frame (consent prompts appear over the title, never mid-fight).
+void monet.configure({ state: () => app.profile.ads, save: persist, hush: (on) => audio.hush(on), childSafe: () => app.profile.ads.quiet })
+  .then(() => { grantEdition(); persist(); render(); });
 // Expose for debugging in the browser console.
-(window as unknown as Record<string, unknown>).__riposte = { app, runScore, vals, eco, artIcon, render, run: { travel, finishCombat } };
+(window as unknown as Record<string, unknown>).__riposte = { app, runScore, vals, eco, artIcon, render, run: { travel, finishCombat }, checkCombatEnd, endRun, monet };

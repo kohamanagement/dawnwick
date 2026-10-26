@@ -9,6 +9,7 @@ import { CARDS } from '../data/cards';
 import { RELIC_LIST } from '../data/relics';
 import { DAILY_MODS } from './run';
 import { TWISTS, VOWS } from '../data/vows';
+import { newAdsState, type AdsState } from '../ads/policy';
 
 export interface Legacy {
   id: string;
@@ -130,6 +131,9 @@ export interface Profile {
   lastDeck: { label: string; cards: string[] } | null;
   /** Echo duels: how often you met an Echo of a saved deck, beat one, or fell to one. */
   echoStats: { met: number; youBeat: number; beatYou: number };
+  // ── v0.17 ──
+  /** Ads, consent and the Last Word Edition (src/ads/policy.ts). */
+  ads: AdsState;
 }
 
 export interface Quest { id: string; text: string; goal: number; prog: number; reward: number; claimed: boolean }
@@ -137,7 +141,7 @@ export interface Quest { id: string; text: string; goal: number; prog: number; r
 export const LEVELS = [0, 100, 250, 450, 700, 1000, 1400, 1900, 2500, 3200, 4000, 4900, 5900, 7000, 8200, 9500, 10900, 12400, 14000, 15700];
 
 /** Shown in Settings and the welcome popup; a test keeps it equal to package.json. */
-export const APP_VERSION = '0.16.0';
+export const APP_VERSION = '0.17.0';
 
 /**
  * What each level unlocks, derived from the data (characters, then cards, then relics)
@@ -176,6 +180,7 @@ export function newProfile(): Profile {
     cosmetics: { owned: ['back_classic', 'title_novice'], familiar: null, back: 'back_classic', title: 'title_novice' },
     history: [], kills: {}, heatWins: {}, vows: {}, weekly: {}, arena: null, arenaBest: 0, arenaRuns: 0, rivals: [],
     puzzles: {}, reflections: {}, nemesis: null, bestNight: 0, lastDeck: null, echoStats: { met: 0, youBeat: 0, beatYou: 0 },
+    ads: newAdsState(),
   };
 }
 
@@ -202,6 +207,7 @@ export function migrate(raw: Partial<Profile>): Profile {
   p.ascension = { ...base.ascension, ...(raw.ascension ?? {}) };
   p.settings = { ...base.settings, ...(raw.settings ?? {}) };
   p.cosmetics = { ...base.cosmetics, ...(raw.cosmetics ?? {}) };
+  p.ads = { ...base.ads, ...(raw.ads ?? {}) };
   p.season = raw.season?.id === base.season.id ? { ...base.season, ...raw.season } : base.season;
   // v0.8 lowered some talent caps: refund ranks above the new cap (talent points are derived, so clamping refunds them).
   p.talents = Object.fromEntries(Object.entries(raw.talents ?? {}).map(([id, r]) => [id, Math.min(r, TALENT_MAP[id]?.max ?? 0)]).filter(([, r]) => (r as number) > 0));
