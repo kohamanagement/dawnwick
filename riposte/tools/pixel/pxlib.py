@@ -65,6 +65,21 @@ class Icon:
                     add.append((x, y))
         for x, y in add:
             s.p[y][x] = 'K'
+        # v0.15.1: art that runs off the 16x16 cell gets its outline on the cell edge too, so no side is left
+        # open (an open side read as a soft, cut-off edge next to the crisp ones).
+        for i in range(N):
+            for x, y in ((0, i), (N - 1, i), (i, 0), (i, N - 1)):
+                if s.p[y][x] not in (None, 'K'):
+                    s.p[y][x] = 'K'
+        # Near-black bodies (top hat, crow, cat, bomb…) vanish into the dark table: give them a 1 px rim
+        # where the light comes from (top and left), one step up the same grey ramp.
+        rim = []
+        for y in range(N):
+            for x in range(N):
+                if s.p[y][x] in ('0', '1') and (s.get(x - 1, y) in (None, 'K') or s.get(x, y - 1) in (None, 'K')):
+                    rim.append((x, y))
+        for x, y in rim:
+            s.p[y][x] = '2'
         return s
 
     def image(s):

@@ -40,7 +40,7 @@ export const FATES: FateDef[] = [
   { id: 'cursed_blade', name: 'The Cursed Blade', icon: '🗡️', text: 'Add a random rare card from your factions, upgraded. Add 1 Wound.', apply: (_r, a) => { const id = a.rareCard(); if (id) a.addToDeck(id, true); a.addToDeck('wound'); } },
   { id: 'wanderer', name: 'The Wanderer', icon: '🧭', text: 'Roadside encounters happen twice as often. +5 Max HP.', apply: (r) => { r.maxHp += 5; r.hp += 5; } },
   { id: 'night_owl', name: 'The Night Owl', icon: '🦉', text: 'Every act is Foggy (you see only 2 rows ahead). Fights pay 30% more gold.' },
-  { id: 'merchant', name: 'The Merchant', icon: '💼', text: 'Shops are 25% cheaper. Fights pay 25% less gold.' },
+  { id: 'merchant', name: 'The Merchant', icon: '🛒', text: 'Shops are 25% cheaper. Fights pay 25% less gold.' },
   { id: 'veteran', name: 'The Veteran', icon: '🎖️', text: 'Start with a random rare keepsake. Enemies have 8% more HP.', apply: (_r, a) => { a.gainRelic('rare'); } },
   { id: 'second_life', name: 'Second Life', icon: '🪶', text: 'Start with the Phoenix Feather (cheat death once). Start at 65% HP.',
     apply: (r) => { if (!r.relics.includes('phoenix_feather')) r.relics.push('phoenix_feather'); r.hp = Math.round(r.maxHp * 0.65); } },

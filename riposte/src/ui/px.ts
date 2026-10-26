@@ -57,19 +57,37 @@ export function pixify(html: string): string {
 /** Installs the sheet once, as a CSS rule, so each icon is just an <i> with two numbers. */
 export function installPx(): void {
   if (typeof document === 'undefined' || document.getElementById('px-sheet')) return;
+  watchDpr();
   const st = document.createElement('style');
   st.id = 'px-sheet';
   const size = (s: string) => `background-size:calc(${s} * ${PX_COLS * CELL / 16}) calc(${s} * ${PX_ROWS * CELL / 16})`;
   // Pseudo-element badges (champion flame, shattered pull) can't hold an <i>, so they get their cell here.
+  // They size from --s like .px does, so the same device-pixel snap below applies to them.
+  const pseudos: string[] = [];
   const pseudo = (sel: string, name: string, s: string) => {
     const i = PX_INDEX[name];
-    return `${sel}{content:'';width:${s};height:${s};background:url(${PX_SHEET}) no-repeat;${size(s)};image-rendering:pixelated;`
-      + `background-position:calc(${s} * -${((i % PX_COLS) * CELL + 1) / 16}) calc(${s} * -${(Math.floor(i / PX_COLS) * CELL + 1) / 16})}`;
+    pseudos.push(sel);
+    return `${sel}{content:'';--want:${s};--s:var(--want);width:var(--s);height:var(--s);background:url(${PX_SHEET}) no-repeat;${size('var(--s)')};image-rendering:pixelated;`
+      + `background-position:calc(var(--s) * -${((i % PX_COLS) * CELL + 1) / 16}) calc(var(--s) * -${(Math.floor(i / PX_COLS) * CELL + 1) / 16})}`;
   };
   st.textContent = `.px{background-image:url(${PX_SHEET});${size('var(--s)')}}`
     + pseudo('.node.champ::after', 'fire', '18px')
     + pseudo('.spread .node.mc.champ::after', 'fire', '22px')
     + pseudo('.spread .node.mc .back::after', 'cloud', '26px') + '.spread .node.mc .back::after{margin:auto;opacity:.45}'
-    + pseudo('.pull.shattered::after', 'burst', '48px') + '.pull.shattered::after{margin:auto}';
+    + pseudo('.pull.shattered::after', 'burst', '48px') + '.pull.shattered::after{margin:auto}'
+    + `@supports (width: round(1px, 1px)){${pseudos.join(',')}{--s:${SNAP}}}`;
   document.head.appendChild(st);
+}
+
+/** --want rounded to whole device pixels per sprite pixel (never below 1:1). Mirrors the .px rule in style.css. */
+const SNAP = 'max(calc(16px / var(--dpr, 1)), calc(round(calc(var(--want) * var(--dpr, 1)), 16px) / var(--dpr, 1)))';
+
+/** Keeps --dpr on <html> in step with the screen (phones are 2x or 3x; browser zoom changes it too). */
+function watchDpr(): void {
+  const set = () => {
+    const d = window.devicePixelRatio || 1;
+    document.documentElement.style.setProperty('--dpr', String(d));
+    matchMedia(`(resolution: ${d}dppx)`).addEventListener?.('change', set, { once: true });
+  };
+  set();
 }
