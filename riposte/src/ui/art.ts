@@ -2,6 +2,7 @@
 // glyph. No image files, so the whole game still ships as one small HTML file.
 import { CARDS } from '../data/cards';
 import { hashStr } from '../engine/rng';
+import { pixify } from './px';
 
 export const ART_ICON: Record<string, string> = {
   strike: '🗡️', guard: '🛡️', brace: '🧱', quick_study: '📖', second_wind: '🌬️', feint: '🎭', bank_shot: '🎯', duel_stance: '🤺',
@@ -107,7 +108,7 @@ function motif(f: string, h: number, c: string): string {
       let s = '';
       const cx = 20 + r(1, 60);
       for (let i = 0; i < 12; i++) { const a = (i / 12) * Math.PI * 2; s += `<line x1="${cx}" y1="30" x2="${cx + Math.cos(a) * 60}" y2="${30 + Math.sin(a) * 60}" stroke="${c}" stroke-width="1" opacity=".18"/>`; }
-      for (let i = 0; i < 4; i++) { const x = 10 + r(i * 4, 80); const y = 10 + r(i * 4 + 2, 40); s += `<ellipse cx="${x}" cy="${y}" rx="${5 + (i % 2) * 2}" ry="${5 + (i % 2) * 2}" fill="none" stroke="${c}" stroke-width="1.4" opacity=".45"/><text x="${x}" y="${y + 2.5}" text-anchor="middle" font-size="6" fill="${c}" opacity=".5">${i % 2 ? '☾' : '☀'}</text>`; }
+      for (let i = 0; i < 4; i++) { const x = 10 + r(i * 4, 80); const y = 10 + r(i * 4 + 2, 40); s += `<ellipse cx="${x}" cy="${y}" rx="${5 + (i % 2) * 2}" ry="${5 + (i % 2) * 2}" fill="none" stroke="${c}" stroke-width="1.4" opacity=".45"/><circle cx="${x}" cy="${y}" r="${i % 2 ? 1.6 : 2.2}" fill="${c}" opacity=".45"/>`; }
       return s;
     }
     case 'glass': {
@@ -235,7 +236,7 @@ export function packSvg(hue: string, icon: string, name: string): string {
     <rect x="16" y="26" width="88" height="118" rx="8" fill="#14121c" opacity=".55" stroke="${hue}" stroke-opacity=".6"/>
     <circle cx="60" cy="74" r="30" fill="none" stroke="${hue}" stroke-width="2" opacity=".8"/>
     <circle cx="60" cy="74" r="22" fill="none" stroke="${hue}" stroke-width="1" opacity=".5" stroke-dasharray="3 4"/>
-    <text x="60" y="86" text-anchor="middle" font-size="32" fill="${hue}">${icon}</text>
+    <foreignObject x="36" y="50" width="48" height="48"><div xmlns="http://www.w3.org/1999/xhtml" class="pxwrap">${pixify(icon)}</div></foreignObject>
     <text x="60" y="128" text-anchor="middle" font-size="11" font-weight="800" fill="#f3ead7" font-family="Alegreya SC, Georgia, serif" letter-spacing="1">${name.toUpperCase()}</text>
     <rect class="packshine" x="-60" y="0" width="50" height="170" fill="url(#ps${h})" transform="skewX(-20)"/>
   </svg>`;

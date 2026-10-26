@@ -137,7 +137,7 @@ export interface Quest { id: string; text: string; goal: number; prog: number; r
 export const LEVELS = [0, 100, 250, 450, 700, 1000, 1400, 1900, 2500, 3200, 4000, 4900, 5900, 7000, 8200, 9500, 10900, 12400, 14000, 15700];
 
 /** Shown in Settings and the welcome popup; a test keeps it equal to package.json. */
-export const APP_VERSION = '0.14.1';
+export const APP_VERSION = '0.15.0';
 
 /**
  * What each level unlocks, derived from the data (characters, then cards, then relics)

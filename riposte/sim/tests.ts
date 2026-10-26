@@ -26,6 +26,8 @@ import { solve, naive } from './solver';
 import { nextAct, choosePatron, descendNight, nightOf, proceed } from '../src/engine/run';
 import { VENUES } from '../src/data/venues';
 import { ART_ICON } from '../src/ui/art';
+import { pixify, pxName, pxText } from '../src/ui/px';
+import { readdirSync, statSync } from 'node:fs';
 import { RELICS } from '../src/data/relics';
 
 import { DIFFICULTY } from '../src/data/difficulty';
@@ -1680,5 +1682,20 @@ test('v0.14 the Candle: Mend heals a quarter plus 4, Rehearse pre-sets a Reactio
 });
 
 test('v0.14 Exposed is +40%', () => { assert.equal(EXPOSED, 1.4); });
+
+test('v0.15 every emoji and symbol in the game has a pixel icon (arrows and plain shapes stay text)', () => {
+  const TEXT_OK = new Set(['→', '←', '↔', '⇿', '⬅', '⬆', '⬇', '⬆️', '●', '○', '■', '◼', '▲', '◆', '◇', '⬢']);
+  const seg = new (Intl as unknown as { Segmenter: new (l: string, o: object) => { segment(s: string): Iterable<{ segment: string }> } }).Segmenter('en', { granularity: 'grapheme' });
+  const pict = /\p{Extended_Pictographic}|[\u2190-\u21FF\u2300-\u23FF\u25A0-\u25FF\u2600-\u27FF\u2900-\u297F\u2B00-\u2BFF\u{1F000}-\u{1FAFF}]/u;
+  const missing = new Set<string>();
+  const walk = (d: string): void => { for (const f of readdirSync(d)) { const p = `${d}/${f}`; if (statSync(p).isDirectory()) walk(p); else if (/\.(ts|css)$/.test(f) && f !== 'pxicons.ts') for (const { segment: g } of seg.segment(readFileSync(p, 'utf8'))) if (pict.test(g) && !TEXT_OK.has(g) && !pxName(g)) missing.add(g); } };
+  walk('src');
+  assert.deepEqual([...missing], []);
+  for (const g of Object.values(ART_ICON)) assert.ok(pxName(g), `card art ${g}`);
+  assert.equal(pxText('🔥 Blaze'), 'Blaze');
+  assert.ok(pixify('<b title="🔥 Burn">🔥 3</b>').includes('title="Burn"'));
+  assert.ok(!/🔥/.test(pixify('<p>🔥 Blaze :px-vine: Thorn</p>')) && !/:px-/.test(pixify('<p>:px-vine:</p>')));
+  assert.ok(pixify('<option>🔥 Blaze</option>') === '<option>Blaze</option>');
+});
 
 console.log(`\n${passed} tests passed`);

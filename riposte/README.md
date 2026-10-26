@@ -17,6 +17,10 @@ _Formerly **Riposte** (renamed in v0.14.1 because the name was taken; the projec
   3. **Legacy → Echo:** your best run decks become ghost opponents (offline now, other players' decks once a server exists).
 - **Business:** free Act 1 demo → $6.99 one-time unlock, $3.99 expansions, cosmetics only; no loot boxes or energy. See [docs/03-MOBILE-BUSINESS-AND-BUILD-PLAN.md](docs/03-MOBILE-BUSINESS-AND-BUILD-PLAN.md).
 
+## New in v0.15 "Pixel Icons"
+
+Every emoji and placeholder glyph is now a hand-drawn hi-bit pixel icon (247 icons, one shared palette, crisp edges): card art, keywords, statuses, elements, factions, map stops, keepsakes, enemies and buttons. Factions show real pictures instead of shapes. Layout and balance are unchanged. Icons live in `tools/pixel/` and build into `src/ui/pxicons.ts`. Notes: [docs/19-V15-PIXEL-ICONS.md](docs/19-V15-PIXEL-ICONS.md).
+
 ## New in v0.14.1 "Dawnwick"
 
 The game is now **Dawnwick: The Last Word**, after the lamp at the Last Table whose flame was Vesper's sun (Wick is its last ember). The chain is now called the **Answer Chain** in the UI and docs; Counter cards are still Ripostes. App id is `com.dawnwick.game` on iOS and Android. Returning players see a one-time note; saves carry over. Name research and clearance: [docs/18-RENAME-DAWNWICK.md](docs/18-RENAME-DAWNWICK.md).
