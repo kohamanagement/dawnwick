@@ -364,7 +364,7 @@ body { background: radial-gradient(120% 70% at 50% -10%, #2a2140 0%, var(--bg) 5
 .bottomnav { display: flex; background: var(--bg2); border-top: 1px solid var(--line); padding-bottom: env(safe-area-inset-bottom); }
 .bottomnav button { position: relative; flex: 1; display: flex; flex-direction: column; align-items: center; gap: 1px; padding: 7px 0 8px; font-size: .72em; color: var(--muted); font-weight: 700; min-height: 54px; }
 .bottomnav button span { font-size: 1.55em; line-height: 1.1; filter: grayscale(.6); transition: transform .15s; }
-.bottomnav button.on { color: var(--gold); } .bottomnav button.on span { filter: none; transform: translateY(-2px) scale(1.08); }
+.bottomnav button.on { color: var(--gold); } .bottomnav button.on span { filter: none; transform: translateY(-2px); }
 .bottomnav .dot { top: 5px; right: calc(50% - 18px); }
 .coach { display: flex; gap: 10px; align-items: center; background: #2d2512; border: 1px solid var(--gold); border-radius: var(--radius); padding: 8px 10px; margin-bottom: 8px; font-size: .85em; animation: toastIn .3s; }
 .coach span { flex: 1; }
@@ -533,7 +533,7 @@ body { background: radial-gradient(120% 70% at 50% -10%, #2a2140 0%, var(--bg) 5
 .node.champ { border-color: #ff7b2e; box-shadow: 0 0 14px rgba(255,123,46,.75); }
 .node.champ::after { content: '🔥'; position: absolute; top: -10px; right: -8px; font-size: .6em; animation: flick .8s ease-in-out infinite alternate; }
 @keyframes flick { to { transform: scale(1.2) translateY(-2px); } }
-.node.reach { transform: translate(-50%, -50%) scale(1.08); }
+.node.reach { transform: translate(-50%, -50%) translateY(-3px); }
 .champkey { color: #ffb37a; }
 
 /* combat stage */
@@ -615,9 +615,9 @@ body { background: radial-gradient(120% 70% at 50% -10%, #2a2140 0%, var(--bg) 5
 .hand { align-items: flex-start; padding: 22px 14px calc(26px + env(safe-area-inset-bottom)); background: linear-gradient(180deg, transparent, var(--bg2) 30%); overflow: visible; }
 .hand .card { transform: translateY(var(--lift)) rotate(var(--rot)); transform-origin: 50% 120%; z-index: var(--z); touch-action: none; box-shadow: -3px 2px 10px rgba(0,0,0,.55); }
 .hand .card.playable { box-shadow: -3px 2px 10px rgba(0,0,0,.55), 0 0 0 1px rgba(111,207,142,.55), 0 0 10px rgba(111,207,142,.25); }
-.hand .card.sel { transform: translateY(-22px) rotate(0) scale(1.06); z-index: 20; }
+.hand .card.sel { transform: translateY(-24px) rotate(0); z-index: 20; }
 .hand .card.dragging { opacity: .25; }
-.hand .card.aiming { transform: translateY(-26px) rotate(0) scale(1.08); z-index: 20; box-shadow: 0 0 0 2px var(--gold), 0 0 20px rgba(232,176,74,.7); }
+.hand .card.aiming { transform: translateY(-28px) rotate(0); z-index: 20; box-shadow: 0 0 0 2px var(--gold), 0 0 20px rgba(232,176,74,.7); }
 .dragghost, .flying { position: fixed; margin: 0; z-index: 51; pointer-events: none; box-shadow: 0 14px 30px rgba(0,0,0,.7); }
 .dragghost.armed { box-shadow: 0 0 0 2px var(--gold), 0 0 26px rgba(232,176,74,.9); }
 .arrow { position: fixed; inset: 0; width: 100%; height: 100%; }
@@ -1043,12 +1043,18 @@ h3 .link { text-transform: none; letter-spacing: 0; margin-left: 6px; font-famil
 .echohall .echolist { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 6px; }
 .echohall .echolist span { font-size: .75em; padding: 2px 7px; border-radius: 99px; background: var(--panel2); }
 
-/* v0.15: hi-bit pixel icons (src/ui/px.ts). One sprite sheet, scaled with hard pixel edges. */
-.px { --s: 1.25em; display: inline-block; width: var(--s); height: var(--s); vertical-align: -.25em; flex: 0 0 auto;
+/* v0.15: hi-bit pixel icons (src/ui/px.ts). One sprite sheet, scaled with hard pixel edges.
+   v0.15.1: --want is the size a context asks for; --s snaps it to a whole number of device pixels per
+   sprite pixel (16, 32, 48… device px, using --dpr from installPx), so every pixel comes out the same
+   width on 2x and 3x phones instead of a mix of 3- and 4-px columns. Browsers without round() keep --want. */
+.px { --want: 1.25em; --s: var(--want); display: inline-block; width: var(--s); height: var(--s); vertical-align: -.25em; flex: 0 0 auto;
   background-repeat: no-repeat; background-position: calc(var(--x) * -1 * var(--s)) calc(var(--y) * -1 * var(--s));
-  margin-block: -.12em; image-rendering: pixelated; image-rendering: crisp-edges; font-style: normal; }
-@supports (image-rendering: pixelated) { .px { image-rendering: pixelated; } }
-.card .cicon .px { --s: 1.6em; }
+  margin-block: -.12em; image-rendering: pixelated; font-style: normal; }
+@supports not (image-rendering: pixelated) { .px { image-rendering: crisp-edges; } }
+@supports (width: round(1px, 1px)) {
+  .px { --s: max(calc(16px / var(--dpr, 1)), calc(round(calc(var(--want) * var(--dpr, 1)), 16px) / var(--dpr, 1))); }
+}
+.card .cicon .px { --want: 1.6em; }
 .packsvg foreignObject { overflow: visible; }
 .packsvg .pxwrap { display: grid; place-items: center; width: 100%; height: 100%; }
-.packsvg .pxwrap .px { --s: 32px; filter: drop-shadow(0 0 6px var(--hue, #e8b04a)); }
+.packsvg .pxwrap .px { --want: 32px; --s: 32px; filter: drop-shadow(0 0 6px var(--hue, #e8b04a)); }

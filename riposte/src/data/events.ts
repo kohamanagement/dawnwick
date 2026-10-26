@@ -98,7 +98,7 @@ export const EVENTS: EventDef[] = [
       { label: 'Sleep', desc: 'Heal 25% of Max HP.', apply: (r) => { const h = Math.round(r.maxHp * 0.25); r.hp = Math.min(r.maxHp, r.hp + h); return 'You wake rested.'; } },
       { label: 'Take root', desc: 'Gain 6 Max HP.', apply: (r) => { r.maxHp += 6; r.hp += 6; return 'Bark-like skin hardens over your scars.'; } },
     ] },
-  { id: 'curse_merchant', name: 'The Jinx Merchant', icon: '💰',
+  { id: 'curse_merchant', name: 'The Jinx Merchant', icon: '🛒',
     text: '"One hundred gold, no questions. You will carry a small Regret, nothing more."',
     options: [
       { label: 'Take the deal', desc: 'Gain 100 gold. Add a Regret to your deck.',

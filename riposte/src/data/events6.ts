@@ -647,7 +647,7 @@ export const EVENTS6: EventDef[] = [
       { label: 'Take the poster', desc: 'Your next rival pays 50 extra gold.', apply: (_r, api) => { api.buff('bounty', 1); return 'You fold it into your pocket.'; } },
       onward,
     ] },
-  { id: 'w_caravan', name: 'A Merchant Caravan', icon: '🐫', kind: 'wayside', text: 'A caravan rests by a well. The merchants wave you over.',
+  { id: 'w_caravan', name: 'A Merchant Caravan', icon: '🛒', kind: 'wayside', text: 'A caravan rests by a well. The merchants wave you over.',
     options: [
       { label: 'Trade stories', desc: 'Gain 15 gold and heal 4 HP.', apply: (_r, api) => { api.gold(15); api.heal(4); return 'Tea, gossip and a few coins.'; } },
       { label: 'Guard them (a fight)', desc: 'Fight off raiders for a rare card reward.', apply: (_r, api) => { api.fightAct('easy', { rare: true }); return 'Raiders on the ridge!'; } },

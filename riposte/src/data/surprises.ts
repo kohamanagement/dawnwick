@@ -15,7 +15,7 @@ export const SURPRISES: SurpriseDef[] = [
     fn: (cb) => { cb.heal(cb.s.player, 6); cb.drawCards(1); } },
   { id: 'reinforcements', name: 'Reinforcements!', icon: '📯', good: -1, text: 'A horn sounds. Another enemy joins the fight.',
     fn: (cb) => { cb.summon(SWARM[Math.min(3, Math.max(1, cb.run.act))]); } },
-  { id: 'cart', name: 'A Runaway Cart', icon: '🛒', good: 1, text: 'A cart full of turnips careens through the fight: 8 damage to every enemy.',
+  { id: 'cart', name: 'A Runaway Cart', icon: ':px-cart:', good: 1, text: 'A cart full of turnips careens through the fight: 8 damage to every enemy.',
     fn: (cb) => { for (const e of cb.alive()) cb.rawDamage(e, 8); } },
   { id: 'dog', name: 'A Stray Dog', icon: '🐕', good: 1, text: 'A stray dog picks a side. It bites a random enemy for 12.',
     fn: (cb) => { const f = cb.alive(); if (f.length) cb.rawDamage(cb.rng.pick(f), 12); } },

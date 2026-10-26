@@ -38,7 +38,11 @@
   background: linear-gradient(160deg, #f5ecd6, #dccfb0); color: #2a2236; border: 2px solid var(--edge, #8a7a5a);
   box-shadow: 0 1px 0 rgba(255,255,255,.5) inset, 0 4px 8px rgba(0,0,0,.55); }
 .spread .node.mc .pip { position: absolute; top: 2px; left: 4px; font-style: normal; font-size: .62em; opacity: .8; }
-.spread .node.mc .ic { font-size: 1.55em; line-height: 1; filter: drop-shadow(0 1px 1px rgba(0,0,0,.25)); }
+.spread .node.mc .ic { font-size: 1.55em; line-height: 1; filter: drop-shadow(0 1px 0 rgba(0,0,0,.28)); }
+.spread .node.mc .ic .px { --want: 32px; margin-block: 0 2px; } .spread .node.mc .pip .px { --want: 11px; }
+.spread .node.mc.n-boss .ic .px { --want: 48px; }
+/* v0.15.1: the card is tilted but its pixel icons are turned back upright, so they never get resampled at an angle. */
+.spread .node.mc .ic, .spread .node.mc .pip { transform: rotate(calc(-1 * var(--rot, 0deg))); }
 .spread .node.mc small { font: 700 .58em/1 var(--body); text-transform: uppercase; letter-spacing: .04em; max-width: 54px; color: #3a2f48; opacity: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
 /* Suit colours: the card's edge and a tinted face tell node types apart at a glance (not only by icon). */
@@ -59,7 +63,9 @@
 .spread .node.n-fog { opacity: 1; filter: none; }
 
 /* Where you can go: lifted off the felt and lit. Where you are: Wick sits on the card. Where you've been: turned aside. */
-.spread .node.mc.reach { transform: translate(-50%, -58%) rotate(0deg) scale(1.1); z-index: 2; }
+/* v0.15.1: lifted by size, not scale(), so the icon on it stays on whole device pixels. */
+.spread .node.mc.reach { transform: translate(-50%, calc(-50% - 7px)) rotate(0deg); width: 64px; height: 88px; z-index: 2; }
+.spread .node.mc.reach .ic, .spread .node.mc.reach .pip { transform: none; }
 .spread .node.mc.reach .face, .spread .node.mc.reach .back { box-shadow: 0 0 0 2px rgb(var(--glow)), 0 0 16px rgba(var(--glow), .75), 0 10px 14px rgba(0,0,0,.55); animation: cardglow 1.6s ease-in-out infinite; }
 @keyframes cardglow { 50% { box-shadow: 0 0 0 2px rgb(var(--glow)), 0 0 26px rgba(var(--glow), .95), 0 12px 16px rgba(0,0,0,.55); } }
 .spread .node.mc.here { z-index: 1; }
@@ -94,7 +100,7 @@
   .spread .candle, .spread .node.mc.deal, .spread .node.mc.deal .face, .spread .node.mc.flip .face, .spread .node.mc.reach .face,
   .spread .node.mc .wick, .spread .dealer .dhand, .spread .threads path.hot { animation: none; }
 }
-@media (min-width: 520px) { .spread .node.mc { width: 66px; height: 90px; } .spread .node.mc .ic { font-size: 1.8em; } }
+@media (min-width: 520px) { .spread .node.mc { width: 66px; height: 90px; } .spread .node.mc .ic { font-size: 1.8em; } .spread .node.mc.reach { width: 72px; height: 98px; } }
 .spread .node.mc.deal.reach .face { animation: mapflip .5s ease-out backwards, cardglow 1.6s ease-in-out infinite; animation-delay: calc(var(--d) + .3s), 1s; }
 
 /* v0.14: dealt face-down. A different back from the fog, with the suit printed large in the middle. */

@@ -17,6 +17,10 @@ _Formerly **Riposte** (renamed in v0.14.1 because the name was taken; the projec
   3. **Legacy → Echo:** your best run decks become ghost opponents (offline now, other players' decks once a server exists).
 - **Business:** free Act 1 demo → $6.99 one-time unlock, $3.99 expansions, cosmetics only; no loot boxes or energy. See [docs/03-MOBILE-BUSINESS-AND-BUILD-PLAN.md](docs/03-MOBILE-BUSINESS-AND-BUILD-PLAN.md).
 
+## New in v0.15.1 "Sharp Pixels"
+
+Icons now land on whole device pixels on 2x and 3x phones (no more uneven 3- and 4-px columns), nothing scales or tilts them at rest, every icon has a closed 1 px outline, dark icons get a rim light, and the Merchant is a travelling trader instead of a shopping cart. Notes: [docs/20-V15-1-SHARP-PIXELS.md](docs/20-V15-1-SHARP-PIXELS.md).
+
 ## New in v0.15 "Pixel Icons"
 
 Every emoji and placeholder glyph is now a hand-drawn hi-bit pixel icon (247 icons, one shared palette, crisp edges): card art, keywords, statuses, elements, factions, map stops, keepsakes, enemies and buttons. Factions show real pictures instead of shapes. Layout and balance are unchanged. Icons live in `tools/pixel/` and build into `src/ui/pxicons.ts`. Notes: [docs/19-V15-PIXEL-ICONS.md](docs/19-V15-PIXEL-ICONS.md).
