@@ -34,6 +34,12 @@
                 android:name="android.support.FILE_PROVIDER_PATHS"
                 android:resource="@xml/file_paths"></meta-data>
         </provider>
+
+        <!-- v0.17 AdMob app id. This is Google's TEST id: replace it with the Android app id from the AdMob console
+             (and the ad unit ids in src/ads/adapter.ts) before release. See docs/23-ADS-AND-UNLOCK.md. -->
+        <meta-data
+            android:name="com.google.android.gms.ads.APPLICATION_ID"
+            android:value="ca-app-pub-3940256099942544~3347511713"/>
     </application>
 
     <!-- Permissions -->

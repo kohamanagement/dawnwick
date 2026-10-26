@@ -20,23 +20,25 @@ The game is playable end to end. What follows is everything between this prototy
 - [ ] Scripted first-run order (so every new player meets traps in the same sequence), and a "replay tutorial" button.
 - [ ] Human playtest round (10–30 players) to confirm balance; the bot numbers in BALANCE.md are a floor.
 
-## 3. Monetization (if shipping the recommended free demo + unlock)
+## 3. Monetization (v0.17: free with ads + $4.99 Last Word Edition)
 
-- [ ] Gate Acts 2–3, characters 2–3 and Ascension behind a non-consumable "Full Game" product.
-- [ ] Add an IAP plugin (e.g. RevenueCat's Capacitor SDK or `cordova-plugin-purchase`), create the product in App Store Connect and Play Console, implement **Restore Purchases**.
-- [ ] Or ship premium-only ($4.99–6.99 paid app) and skip IAP entirely for v1: the fastest path to the stores.
+The code is done (AdMob + RevenueCat, consent, restore, offline). What remains is store-side; the full checklist is in [23-ADS-AND-UNLOCK.md](23-ADS-AND-UNLOCK.md#6-what-mike-sets-up-store-side).
+- [ ] AdMob account, two apps, interstitial + rewarded ad units, GDPR and US-state consent messages, app-ads.txt; paste the ids (they are Google TEST ids now).
+- [ ] Non-consumable `dawnwick_last_word` ($4.99) in App Store Connect and Play Console; Paid Apps agreement and merchant account.
+- [ ] RevenueCat project with entitlement `last_word`; paste the two public SDK keys.
+- [ ] Sandbox / license-tester purchase and Restore on real devices.
 
 ## 4. Store builds
 
 **Android**
 - [ ] `npm run cap:android`, then in Android Studio: set `versionCode`/`versionName` in `android/app/build.gradle`, create an upload keystore, Build → Generate Signed Bundle (AAB).
 - [ ] Target API level: Play requires the current target SDK level (API 35 for new apps in 2025–26); Capacitor 7's template targets it.
-- [ ] Play Console: content rating questionnaire (IARC), Data safety form ("no data collected"), target audience (not children), app access, ads = no.
+- [ ] Play Console: content rating questionnaire (IARC), Data safety form (v0.17: ads and purchases now collect device IDs, interactions and purchase history; see 23-ADS-AND-UNLOCK.md), target audience 13+ (not children), app access, ads = **yes**.
 - [ ] Internal testing track → closed testing (new personal developer accounts must run a closed test with 12+ testers for 14 days before production).
 
 **iOS** (needs a Mac with Xcode 16+)
 - [ ] `npm run cap:ios`, set the Team and bundle ID in Xcode, version/build numbers, Product → Archive → upload.
-- [ ] App Store Connect: age rating questionnaire (expect 9+; see the Gambler's Echo note below), App Privacy = "Data Not Collected", accessibility labels, export compliance (no encryption beyond HTTPS = exempt).
+- [ ] App Store Connect: age rating questionnaire (expect 9+; see the Gambler's Echo note below), App Privacy (v0.17: no longer "Data Not Collected"; AdMob and RevenueCat collect identifiers, usage and purchase data, see 23-ADS-AND-UNLOCK.md), accessibility labels, export compliance (no encryption beyond HTTPS = exempt).
 - [ ] TestFlight external test, then submit for review.
 
 ## 5. Store listing

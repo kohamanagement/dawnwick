@@ -880,6 +880,13 @@ export function takeCard(run: RunState, id: string | null): void {
       w.answer = { card: id, cost: counter ? ANSWER_COST - 10 : ANSWER_COST, jinx: 'regret' };
     }
   }
+  // v0.17 Second Look (a Dealer's favor): the rest of the Deal stays on the table for one more pick.
+  if (w.extraPick && id) {
+    w.extraPick = false;
+    w.cards = w.cards.filter((c) => c !== id);
+    w.hidden = null;
+    if (w.cards.length) return;
+  }
   w.rareCards = undefined;
   w.cards = null;
   w.hidden = null;

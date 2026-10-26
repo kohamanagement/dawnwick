@@ -258,6 +258,10 @@ export interface RewardState {
   answer?: { card: string; cost: number; jinx: string } | null;
   /** v0.14: what happened when the Dealer answered (for the screen). */
   answerNote?: string | null;
+  /** v0.17 Second Look (a Dealer's favor): the next card taken leaves the rest of the Deal on the table for one more pick. */
+  extraPick?: boolean;
+  /** v0.17 Ante Up (a Dealer's favor): this reward's gold was doubled. */
+  anted?: boolean;
 }
 
 export interface ShopState {
@@ -439,6 +443,9 @@ export interface RunState {
   echoBeat?: { label: string; cards: string[] } | null;
   /** Echo duelists your Legacy decks beat during this run (shown on the results screen). */
   echoWins?: number;
+  // ── v0.17 ──
+  /** The Dealer's favors used this run (src/engine/favors.ts): scope key → uses, plus `total`. Never set by the sims. */
+  favors?: Record<string, number>;
 }
 
 export interface NemesisInfo {
