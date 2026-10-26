@@ -45,6 +45,7 @@ import { viewSpread } from './ui/map';
 import * as audio from './ui/audio';
 import * as ev from './ui/events';
 import * as story from './ui/story';
+import * as td from './ui/tellDealer';
 import * as arena from './engine/arena';
 import { OMENS, omenCap } from './data/omens';
 import { ACT_NAMES } from './data/enemies';
@@ -255,6 +256,7 @@ function render(): void {
   const kept = scrollKey === lastScrollKey ? KEEP_SCROLL.map((sel) => [...root.querySelectorAll(sel)].map((el) => el.scrollTop)) : null;
   root.innerHTML = pixify(html);
   lastScrollKey = scrollKey;
+  td.restoreDraft();
   // v0.10: keyboard and screen-reader users land inside a newly opened popup.
   const openModal = app.modal ?? '';
   if (openModal && openModal !== lastModal) root.querySelector<HTMLElement>('.modal .btn.primary, .modal .btn')?.focus({ preventScroll: true });
@@ -272,6 +274,7 @@ function render(): void {
   audio.setMood(musicMood());
   soundTrack();
   runFeedback();
+  td.logScreen();
 }
 
 /** v0.13: which piece of music fits the screen. Acts have themes; fights lean in; bosses get the tense variant. */
@@ -940,6 +943,7 @@ function viewEnd(): string {
     ].filter((x) => x[2]).map(([v, label, , cls]) => `<div${cls ? ` class="${cls}"` : ''}><b>${v}</b><small>${label}</small></div>`).join('')}
     </div>
     ${highlights(r)}
+    ${td.endCard()}
     ${r.stats.echoMet ? `<div class="levelup q">🪞 ${r.stats.echoWon ? 'You beat your own Echo this run.' : 'Your Echo got the better of you this run.'}</div>` : ''}
     ${nightOf(r) ? `<div class="levelup ach">🌙 The Long Night: you reached night ${nightOf(r)} and cleared ${nightsCleared(r)}.</div>` : ''}
     ${!r.won && app.profile.nemesis && !r.daily && !r.weekly ? `<div class="levelup q">☠ <b>${esc(app.profile.nemesis.name)}</b> is now your Nemesis. It will be waiting in Act ${app.profile.nemesis.act} next run.</div>` : ''}
@@ -1012,6 +1016,10 @@ function viewSettings(): string {
       ${settingsAds()}
       <h3>Help</h3>
       <button class="btn ghost" data-a="replayTips">Replay tutorial tips</button>
+      <h3>Playtest feedback</h3>
+      <label class="toggle"><span>Show "Tell the Dealer" buttons</span><input type="checkbox" data-a="tdToggle" ${td.visible() ? 'checked' : ''}></label>
+      <p class="muted small">A button on the title screen, in the run menu and after each run that sends us a note with your run filled in (class, act, floor, seed, device, your last 20 moves). Nothing is sent unless you tap Send.</p>
+      <button class="btn ghost" data-a="tellDealer" data-v="settings">🕯 Tell the Dealer</button>
       <p class="muted small">On a keyboard: 1–9 inspects a card in hand (press again to play it), E ends your turn, Esc closes popups.</p>
       <h3>Data</h3>
       <button class="btn ghost danger" data-a="resetAll">Reset all progress</button>
@@ -1246,6 +1254,7 @@ function eventSfx(ev: UiEvent, broke: boolean): audio.Sfx | 'coins' | null {
 const chainWaits = (): boolean => (app.profile.settings.counters ?? 'ask') === 'ask';
 
 async function showEvents(events: UiEvent[]): Promise<void> {
+  td.logEvents(events);
   let chain: UiEvent | null = null;
   let sounded = 0;
   for (let i = 0; i < events.length; i++) {
@@ -1614,6 +1623,12 @@ const actions: Record<string, Handler> = {
     const left = r && res && res.keep && eco.souvenirOptions(r).length ? res.keep - app.kept.length : 0;
     if (left > 0) ask(`You have ${left} souvenir pick${left > 1 ? 's' : ''} left. Leave without keeping ${left > 1 ? 'them' : 'it'}?`, 'Leave anyway', () => void go()); else void go();
   },
+  // v0.18 Tell the Dealer (playtest feedback)
+  tellDealer: (el) => td.open((el.dataset.v ?? 'title') as 'title' | 'menu' | 'end' | 'settings'),
+  tdSend: () => td.send(),
+  tdCopy: () => td.copy(),
+  tdShare: () => td.share(),
+  tdToggle: (el) => { app.profile.settings.tellDealer = (el as HTMLInputElement).checked; persist(); render(); },
   closeModal: () => { app.modal = null; app.confirmFn = null; if (lastHandOpen) { concludeCombat(); return; } render(); },
   // v0.17 ads and the Last Word Edition
   favor: (el) => { void useFavor(el.dataset.id as FavorId); },
@@ -1785,6 +1800,7 @@ const actions: Record<string, Handler> = {
     <button class="btn wide" data-a="go" data-v="title">Save & quit to hub</button>
     <button class="btn wide" data-a="go" data-v="howto">How to play</button>
     <button class="btn wide" data-a="go" data-v="settings">Settings</button>
+    ${td.menuButton()}
     <button class="btn wide ghost danger" data-a="abandon">Abandon run</button>`),
   abandon: () => ask('Abandon this run? It counts as a loss.', 'Abandon run', () => { app.run!.finished = true; endRun(); }),
   deck: () => {
@@ -2064,6 +2080,7 @@ async function playSel(targetIdx?: number): Promise<void> {
   if (!c || !cb.canPlay(c)) return;
   const tgt = targetIdx ?? cb.s.enemies.findIndex((e) => !e.dead);
   app.sel = null;
+  td.log.push('tap', `play ${c.id}${c.up ? '+' : ''}${CARDS[c.id].target ? ` at enemy ${tgt}` : ''}`);
   if (app.tipIdx === 0 && !app.profile.tutorialDone) app.tipIdx = 1; // v0.10: playing a card answers the "how to play a card" tip
   app.busy = true;
   await flyCard(uid, CARDS[c.id].target ? tgt : undefined);
@@ -2180,6 +2197,7 @@ window.addEventListener('pointerup', (e) => {
   } else if (!above) return;
   if (!cb.canPlay(c)) { toast(CARDS[c.id].unplayable ? 'This card cannot be played.' : 'Not enough energy', 'warn'); return; }
   app.sel = d.uid;
+  td.log.push('tap', `drag-play ${c.id}${c.up ? '+' : ''}${target !== undefined ? ` at enemy ${target}` : ''}`);
   if (!app.profile.settings.reduceMotion) burst(d.target !== null ? root.querySelector(`.enemy[data-who="${d.target}"]`)! : root.querySelector('.enemies')!, 8, '#e8b04a');
   audio.sfx(playSfx(c.id));
   void (async () => {
@@ -2200,6 +2218,7 @@ root.addEventListener('click', (e) => {
   e.stopPropagation();
   if ((el as HTMLButtonElement).disabled) return;
   if (el.tagName === 'BUTTON' && !QUIET_CLICK.has(a)) audio.sfx('click');
+  td.logTap(a, el);
   void actions[a]?.(el);
 });
 // v0.10: keyboard play for the browser version: Esc backs out of popups and selections, E ends the turn, 1-9 pick a card in hand.
@@ -2287,6 +2306,8 @@ function welcome(): void {
   persist();
 }
 
+td.installErrorLog();
+td.trackDraft();
 applySettings();
 resumeIfNeeded();
 grantEdition();

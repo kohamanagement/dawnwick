@@ -1,5 +1,6 @@
 // Hub screens between runs: Play, Cards (collection + loadouts), Shop (packs + market), Forge, Profile.
 import * as story from './story';
+import * as td from './tellDealer';
 import type { CharId, ModId, Element } from '../engine/types';
 import { ELEMENT_LIST, elemIcon, printedElement } from '../data/elements';
 import { app, ui, type View } from './state';
@@ -81,6 +82,7 @@ export function viewTitle(): string {
       <button class="btn ${app.run ? '' : 'primary'} big-cta" data-a="newRun">New run</button>
       <button class="btn" data-a="daily">Daily Duel<small>${esc(CHARACTERS[daily.character].name)} · ${esc(DAILY_MODS[daily.mod].split(':')[0])}${best ? ` · best ${best.score}` : ''}</small></button>
       <button class="btn storybtn" data-a="storyBook">📖 The Story So Far${story.unreadCount() ? '<i class="dot"></i>' : ''}<small>${story.bookProgress()}</small></button>
+      ${td.titleButton()}
     </div>
     ${echoHall(pr)}
     <div class="questcard" data-a="hub" data-v="profile" data-t="quests">

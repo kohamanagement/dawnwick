@@ -1134,3 +1134,20 @@ body[data-back="back_lastword"] .pile[data-p="draw"] { border: 1px solid #f2c94c
 .mockad-row { display: flex; gap: 8px; justify-content: space-between; margin-top: 12px; }
 .mockad-row .btn { flex: 1; }
 .reduce-motion .mockad-candle i { animation: none; }
+
+/* v0.18 Tell the Dealer (playtest feedback) */
+.tdbtn { font-size: .95em; }
+.tdform .tdkinds { display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; margin: 8px 0 10px; }
+.tdkind input { position: absolute; opacity: 0; pointer-events: none; }
+.tdkind span { display: inline-block; min-height: 36px; line-height: 20px; padding: 8px 12px; border-radius: 18px; border: 1px solid var(--line); background: var(--panel2); font-size: .9em; cursor: pointer; }
+.tdkind input:checked + span { border-color: var(--gold); color: var(--gold); background: color-mix(in srgb, var(--gold) 14%, var(--panel2)); }
+.tdkind input:focus-visible + span { outline: 2px solid var(--gold); outline-offset: 2px; }
+.tdq { display: grid; gap: 4px; margin: 8px 0; font-size: .9em; }
+.tdq textarea, .tdq input, .tdq select, textarea.tdreport { width: 100%; box-sizing: border-box; font: inherit; font-size: 16px; color: var(--ink, inherit); background: var(--panel2); border: 1px solid var(--line); border-radius: 10px; padding: 8px 10px; }
+.tdq textarea { resize: vertical; }
+.tdmore { margin: 8px 0; border-top: 1px solid var(--line); padding-top: 6px; }
+.tdmore summary { cursor: pointer; min-height: 36px; line-height: 36px; color: var(--gold); }
+pre.tdreport { white-space: pre-wrap; word-break: break-word; font-size: .72em; max-height: 220px; overflow-y: auto; background: var(--panel2); border-radius: 8px; padding: 8px; }
+.tdend { display: flex; align-items: center; gap: 10px; justify-content: space-between; text-align: left; background: var(--panel2); border: 1px dashed var(--line); border-radius: 12px; padding: 8px 12px; margin: 10px 0; font-size: .9em; }
+.tdend > span { flex: 1; }
+.tdend .btn { flex: none; width: auto; min-width: 84px; }

@@ -18,7 +18,7 @@ The game is playable end to end. What follows is everything between this prototy
 - [ ] **App icon and splash:** generate all sizes with `@capacitor/assets` from a 1024×1024 icon (`public/icon.svg` is a placeholder).
 - [ ] **Status bar / safe areas:** add `@capacitor/status-bar`; the CSS already respects safe-area insets.
 - [ ] Scripted first-run order (so every new player meets traps in the same sequence), and a "replay tutorial" button.
-- [ ] Human playtest round (10–30 players) to confirm balance; the bot numbers in BALANCE.md are a floor.
+- [ ] Human playtest round (10–30 players) to confirm balance; the bot numbers in BALANCE.md are a floor. v0.18: kit, in-game feedback, APK workflow and TestFlight steps in [24-PLAYTESTING.md](24-PLAYTESTING.md).
 
 ## 3. Monetization (v0.17: free with ads + $4.99 Last Word Edition)
 
