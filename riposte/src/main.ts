@@ -39,6 +39,7 @@ import {
 import { app, root, ui, type View } from './ui/state';
 import * as hub from './ui/hub';
 import { artIcon } from './ui/art';
+import { installPx, pixify } from './ui/px';
 import { viewSpread } from './ui/map';
 import * as audio from './ui/audio';
 import * as ev from './ui/events';
@@ -55,6 +56,7 @@ const speed = () => (app.profile.settings.turbo ? 0.25 : app.profile.settings.fa
 // Layers that survive re-renders: particles/flying cards, and toasts.
 const fx = document.createElement('div'); fx.id = 'fx'; document.body.appendChild(fx);
 const toasts = document.createElement('div'); toasts.id = 'toasts'; document.body.appendChild(toasts);
+installPx();
 
 audio.configure(() => app.profile.settings);
 
@@ -195,7 +197,7 @@ function toast(html: string, kind = ''): void {
   const el = document.createElement('div');
   el.className = `toast ${kind}`;
   if (kind === 'warn') audio.sfx('warn');
-  el.innerHTML = html;
+  el.innerHTML = pixify(html);
   toasts.appendChild(el);
   // v0.10: long toasts stay up long enough to read, and any toast can be tapped away.
   const ms = Math.min(6000, 2600 + Math.max(0, el.textContent!.length - 60) * 40);
@@ -246,7 +248,7 @@ function render(): void {
   const r = app.run;
   const scrollKey = `${app.view}:${r?.screen ?? ''}:${app.collTab}:${app.profTab}:${app.collPage}:${app.forgePage}:${app.picker?.title ?? ''}`;
   const kept = scrollKey === lastScrollKey ? KEEP_SCROLL.map((sel) => [...root.querySelectorAll(sel)].map((el) => el.scrollTop)) : null;
-  root.innerHTML = html;
+  root.innerHTML = pixify(html);
   lastScrollKey = scrollKey;
   // v0.10: keyboard and screen-reader users land inside a newly opened popup.
   const openModal = app.modal ?? '';
@@ -937,9 +939,9 @@ function viewHowto(): string {
       <p>Owned cards appear twice as often in runs, and <b>Legendaries</b> only appear once you own them. In <b>Loadouts</b> you can swap starter cards for owned ones. At the end of a run you keep <b>souvenir</b> cards from your final deck.</p>
       <p>Every level gives a <b>talent point</b> for the three schools (Guard, Coin, Feint) plus 50 Coins and a pack. <b>Trophies</b> unlock new keepsakes. Daily Duels ignore all of this so everyone starts equal.</p>
       <h3>Factions</h3>
-      <p>▲ <b>Ember</b>: damage, Burn, Edge. ◆ <b>Tide</b>: draw, Shaken, Negate. ● <b>Thorn</b>: Guard, Barbs, healing. ✦ <b>Void</b>: Doom, Sacrifice, Disrupt. ✧ <b>Gilt</b>: the Fate Coin and Ante. ◇ <b>Glass</b>: Steal, Glints, Mimic. ⚱ <b>Grave</b>: Crypt, Exhume, Haunt. ☼ <b>Dawn</b>: Counters, Verdict. ϟ <b>Storm</b>: Charge, Shock. ❅ <b>Rime</b>: Chill, Freeze. ⬢ <b>Stone</b>: Fortify, Tremor. ⚗ <b>Aether</b>: Prism, Catalyze. ♞ <b>Beast</b>: companions. ☽ <b>Dusk</b>: Mark, Veil.</p>
+      <p>:px-fire: <b>Ember</b>: damage, Burn, Edge. :px-wave: <b>Tide</b>: draw, Shaken, Negate. :px-vine: <b>Thorn</b>: Guard, Barbs, healing. :px-spiral: <b>Void</b>: Doom, Sacrifice, Disrupt. :px-coin: <b>Gilt</b>: the Fate Coin and Ante. :px-shard: <b>Glass</b>: Steal, Glints, Mimic. :px-urn: <b>Grave</b>: Crypt, Exhume, Haunt. :px-sun: <b>Dawn</b>: Counters, Verdict. :px-bolt: <b>Storm</b>: Charge, Shock. :px-snow: <b>Rime</b>: Chill, Freeze. :px-rock: <b>Stone</b>: Fortify, Tremor. :px-alembic: <b>Aether</b>: Prism, Catalyze. :px-paw: <b>Beast</b>: companions. :px-moon: <b>Dusk</b>: Mark, Veil.</p>
       <h3>The Cardsharp and the Fate Coin</h3>
-      <p>✧ <b>Gilt</b> cards read your <b>Fate Coin</b> when they resolve: ☀ Sun or ☾ Moon. Most of them <b>Flip</b> it afterwards. It is never random, so plan the order: set up ☾ before All In, ☀ before Heads Up. <b>Ante</b> is a stack you build over the fight; Jackpot and Royal Flush <b>cash it in</b>.</p>
+      <p>:px-coin: <b>Gilt</b> cards read your <b>Fate Coin</b> when they resolve: ☀ Sun or ☾ Moon. Most of them <b>Flip</b> it afterwards. It is never random, so plan the order: set up ☾ before All In, ☀ before Heads Up. <b>Ante</b> is a stack you build over the fight; Jackpot and Royal Flush <b>cash it in</b>.</p>
       <h3>Omens</h3>
       <p>Tarot answers. They drop from fights (always from bosses) and are sold by the Merchant. Hold up to 3 on the belt by your keepsakes. Each Omen carries a sign: ⚔ it answers an enemy attack, ✋ an enemy non-attack, ⟲ an enemy trap or Reaction firing. You never play one on your own turn: when the chain stops on an enemy link with that sign, you may <b>turn it over</b> for free as your answer (The Hanged Man negates the attack outright). The Star and The Hierophant also work on the map.</p>
       <h3>Alternate acts</h3>
@@ -953,7 +955,7 @@ function viewHowto(): string {
       <h3>Mastery and cosmetics</h3>
       <p>Every card you play earns mastery. Each level pays Dust and upgrades the card frame (Bronze, Silver, Gold, Prismatic, Living). Familiars, card backs and titles come from the Season track, trophies and the Arena. None of them change gameplay.</p>
       <h3>The Magpie and Glass (v0.4)</h3>
-      <p>◇ <b>Glass</b> cards <b>Steal</b>: they take the enemy's oldest face-down trap and set it in your own free Reaction slot, where it fires for you. A trap with no room becomes a <b>Glint</b>, a 0-cost shard that deals 4 damage to a random enemy. <b>Mimic</b> repeats the last Attack or Trick you played this turn. Some enemies steal too: kill them to get your card back.</p>
+      <p>:px-shard: <b>Glass</b> cards <b>Steal</b>: they take the enemy's oldest face-down trap and set it in your own free Reaction slot, where it fires for you. A trap with no room becomes a <b>Glint</b>, a 0-cost shard that deals 4 damage to a random enemy. <b>Mimic</b> repeats the last Attack or Trick you played this turn. Some enemies steal too: kill them to get your card back.</p>
       <h3>Damage preview</h3>
       <p>Select a card and the enemy HP bars show what it would do. Face-down traps you can't see are left out, and a ⚠ line tells you how many could answer it.</p>
       <h3>Wandering bosses and the Reflection</h3>
@@ -961,7 +963,7 @@ function viewHowto(): string {
       <h3>Riddles of the Chain</h3>
       <p>Hand-made one-turn puzzles in the Events tab. Everything is face-up and nothing is random. Find the order that wins.</p>
       <h3>The Sexton and the Crypt (v0.5)</h3>
-      <p>⚱ <b>Grave</b> cards work your <b>Crypt</b>. While you play the Sexton, your Reactions go to the Crypt when they leave play instead of the discard pile. <b>Haunt</b> effects fire as a card is buried. <b>Exhume</b> sets the newest buried Reaction again for free, and <b>Bury</b> puts the top of your draw pile into the Crypt. Tap ⚱ by your piles to see it.</p>
+      <p>:px-urn: <b>Grave</b> cards work your <b>Crypt</b>. While you play the Sexton, your Reactions go to the Crypt when they leave play instead of the discard pile. <b>Haunt</b> effects fire as a card is buried. <b>Exhume</b> sets the newest buried Reaction again for free, and <b>Bury</b> puts the top of your draw pile into the Crypt. Tap ⚱ by your piles to see it.</p>
       <h3>Prime and Converge</h3>
       <p><b>Prime</b> Reactions gain 1 Prime each turn they stay set and hit harder for it (the 🌞 number on the slot). <b>Converge</b> counts the different factions you have played this turn, so mix your colours before you play it.</p>
       <h3>Venues</h3>
@@ -1083,7 +1085,7 @@ function banner(text: string, cls: string): void {
   if (app.profile.settings.reduceMotion) return;
   const el = document.createElement('div');
   el.className = `banner ${cls}`;
-  el.innerHTML = `<span>${text}</span>`;
+  el.innerHTML = pixify(`<span>${text}</span>`);
   fx.appendChild(el);
   setTimeout(() => el.remove(), 1100 * speed() + 100);
 }
@@ -1114,14 +1116,14 @@ async function showEvents(events: UiEvent[]): Promise<void> {
     if (ev.t === 'elem') {
       const el = document.createElement('div');
       el.className = `float f-elem ${(ev.n ?? 0) > 0 ? 'eff' : 'res'}`;
-      el.textContent = ev.s ?? '';
+      el.innerHTML = pixify(esc(ev.s ?? ''));
       host.appendChild(el);
       setTimeout(() => el.remove(), 1100);
       continue;
     }
     const el = document.createElement('div');
     el.className = `float f-${ev.t} ${ev.t === 'dmg' && (ev.n ?? 0) >= 10 ? 'crit' : ''}`;
-    el.textContent = ev.t === 'dmg' ? `-${ev.n}` : ev.t === 'heal' ? `+${ev.n}` : ev.t === 'block' ? (ev.n! > 0 ? `+${ev.n}🛡` : `${ev.n}🛡`) : (ev.s ?? '');
+    el.innerHTML = pixify(esc(ev.t === 'dmg' ? `-${ev.n}` : ev.t === 'heal' ? `+${ev.n}` : ev.t === 'block' ? (ev.n! > 0 ? `+${ev.n}🛡` : `${ev.n}🛡`) : (ev.s ?? '')));
     el.style.setProperty('--dx', `${(Math.random() * 40 - 20).toFixed(0)}px`);
     host.appendChild(el);
     setTimeout(() => el.remove(), 1100);
@@ -1161,7 +1163,7 @@ function famBark(extra: string): void {
   if (!f || !host) return;
   const el = document.createElement('div');
   el.className = 'float f-text bark';
-  el.textContent = `${BARKS[f] ?? '!'} ${extra}`;
+  el.innerHTML = pixify(esc(`${BARKS[f] ?? '!'} ${extra}`));
   host.appendChild(el);
   host.classList.remove('hop'); void (host as HTMLElement).offsetWidth; host.classList.add('hop');
   setTimeout(() => el.remove(), 1100);

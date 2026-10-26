@@ -1042,3 +1042,13 @@ h3 .link { text-transform: none; letter-spacing: 0; margin-left: 6px; font-famil
 .echohall b { font-family: var(--display); } .echohall small { color: var(--ink2); display: block; margin-top: 2px; }
 .echohall .echolist { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 6px; }
 .echohall .echolist span { font-size: .75em; padding: 2px 7px; border-radius: 99px; background: var(--panel2); }
+
+/* v0.15: hi-bit pixel icons (src/ui/px.ts). One sprite sheet, scaled with hard pixel edges. */
+.px { --s: 1.25em; display: inline-block; width: var(--s); height: var(--s); vertical-align: -.25em; flex: 0 0 auto;
+  background-repeat: no-repeat; background-position: calc(var(--x) * -1 * var(--s)) calc(var(--y) * -1 * var(--s));
+  margin-block: -.12em; image-rendering: pixelated; image-rendering: crisp-edges; font-style: normal; }
+@supports (image-rendering: pixelated) { .px { image-rendering: pixelated; } }
+.card .cicon .px { --s: 1.6em; }
+.packsvg foreignObject { overflow: visible; }
+.packsvg .pxwrap { display: grid; place-items: center; width: 100%; height: 100%; }
+.packsvg .pxwrap .px { --s: 32px; filter: drop-shadow(0 0 6px var(--hue, #e8b04a)); }

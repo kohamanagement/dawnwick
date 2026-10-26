@@ -16,8 +16,8 @@ export const esc = (s: string): string =>
   s.replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]!));
 
 export const FACTION_GLYPH: Record<string, string> = {
-  ember: '▲', tide: '◆', thorn: '●', void: '✦', gilt: '✧', glass: '◇', grave: '⚱', neutral: '■', curse: '✖', enemy: '◼',
-  storm: 'ϟ', rime: '❅', stone: '⬢', dawn: '☼', aether: '⚗', beast: '♞', dusk: '☾',
+  ember: ':px-fire:', tide: ':px-wave:', thorn: ':px-vine:', void: ':px-spiral:', gilt: ':px-coin:', glass: ':px-shard:', grave: ':px-urn:', neutral: ':px-cardback:', curse: ':px-blackheart:', enemy: ':px-demon:',
+  storm: ':px-bolt:', rime: ':px-snow:', stone: ':px-rock:', dawn: ':px-sun:', aether: ':px-alembic:', beast: ':px-paw:', dusk: ':px-moon:',
 };
 export const FACTION_NAME: Record<string, string> = {
   ember: 'Ember', tide: 'Tide', thorn: 'Thorn', void: 'Void', gilt: 'Gilt', glass: 'Glass', grave: 'Grave', neutral: 'Neutral', curse: 'Jinx', enemy: 'Enemy',
