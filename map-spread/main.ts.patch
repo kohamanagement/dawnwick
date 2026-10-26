@@ -1,0 +1,63 @@
+--- /mnt/project-files/tcg-roguelike/riposte/src/main.ts	2026-10-25 22:34:16.067974000 +0000
++++ rp/src/main.ts	2026-10-25 22:49:24.152160133 +0000
+@@ -37,6 +37,7 @@
+ import { app, root, ui, type View } from './ui/state';
+ import * as hub from './ui/hub';
+ import { artIcon } from './ui/art';
++import { viewSpread } from './ui/map';
+ import * as audio from './ui/audio';
+ import * as ev from './ui/events';
+ import * as story from './ui/story';
+@@ -310,42 +311,10 @@
+ };
+ 
+ function viewMap(r: RunState): string {
+-  const reach = reachable(r);
+-  const isReach = (row: number, col: number) => reach.some((p) => p.row === row && p.col === col);
+-  const fog = foggy(r);
+-  const H = 72;
+-  const total = (ROWS + 1) * H + 40;
+-  const x = (col: number) => ((col + 0.5) / 4) * 100;
+-  const y = (row: number) => total - 40 - row * H;
+-  let lines = '';
+-  for (const row of r.map) for (const n of row) {
+-    const fromHere = r.pos ? r.pos.row === n.row && r.pos.col === n.col : false;
+-    for (const nc of n.next) lines += `<line class="${fromHere ? 'hot' : ''}" x1="${x(n.col)}%" y1="${y(n.row)}" x2="${x(nc)}%" y2="${y(n.row + 1)}" />`;
+-    if (n.row === ROWS - 1) lines += `<line class="${fromHere ? 'hot' : ''}" x1="${x(n.col)}%" y1="${y(n.row)}" x2="50%" y2="${y(ROWS)}" />`;
+-  }
+-  let nodes = '';
+-  const seen = new Set<string>(['boss']);
+-  let champSeen = false;
+-  for (const row of r.map) for (const n of row) {
+-    const here = r.pos && r.pos.row === n.row && r.pos.col === n.col;
+-    const past = r.pos && n.row <= r.pos.row && !here;
+-    const ok = isReach(n.row, n.col);
+-    const hidden = fog && n.row > (r.pos?.row ?? -1) + 2;
+-    if (hidden) {
+-      nodes += `<button class="node n-fog ${ok ? 'reach' : ''}" style="left:${x(n.col)}%;top:${y(n.row)}px" data-a="${ok ? 'travel' : 'nodeInfo'}" data-row="${n.row}" data-col="${n.col}" aria-label="Hidden by fog">☁️</button>`;
+-      continue;
+-    }
+-    seen.add(n.type);
+-    if (n.champ) champSeen = true;
+-    nodes += `<button class="node n-${n.type} ${n.champ ? 'champ' : ''} ${ok ? 'reach' : ''} ${here ? 'here' : ''} ${past ? 'past' : ''}"
+-      style="left:${x(n.col)}%;top:${y(n.row)}px" data-a="${ok ? 'travel' : 'nodeInfo'}" data-row="${n.row}" data-col="${n.col}"
+-      aria-label="${n.champ ? 'Champion ' : ''}${NODE_NAME[n.type]}${n.venue ? ` at ${esc(VENUE_MAP[n.venue]?.name ?? '')}` : ''}${ok ? ' (available)' : ''}">${NODE_ICON[n.type]}${n.venue && VENUE_MAP[n.venue] ? `<span class="venuebadge">${VENUE_MAP[n.venue].icon}</span>` : ''}</button>`;
+-  }
+   const boss = actEnc(r).boss;
+   const bv = r.venues?.[r.act - 1] ? VENUE_MAP[r.venues[r.act - 1]!] : null;
+   const nem = r.nemesis && !r.nemesis.met && r.nemesis.act === r.act ? r.nemesis : null;
+   const actTitle = nightOf(r) ? `The Long Night · Night ${nightOf(r)}` : `Act ${r.act}: ${ACT_NAMES[r.act]?.[r.acts?.[r.act - 1] ?? 0] ?? ''}`;
+-  nodes += `<button class="node n-boss ${isReach(ROWS, 0) ? 'reach' : ''}" style="left:50%;top:${y(ROWS)}px" data-a="${isReach(ROWS, 0) ? 'travel' : 'bossInfo'}" data-row="${ROWS}" data-col="0" aria-label="Boss: ${esc(boss.name)}">${ENEMIES[boss.enemies[0]].icon}</button>`;
+   return `<div class="mapwrap" id="mapwrap">
+     <div class="maphead"><b>${esc(actTitle)}</b>${!nightOf(r) && r.acts?.[r.act - 1] ? (r.acts[r.act - 1] === 2 ? ' <span class="altpill">wild</span>' : ' <span class="altpill">alternate</span>') : ''}<br><small>Boss: ${esc(boss.name)}${bv ? ` · ${bv.icon} ${esc(bv.name)}` : ''}</small> <button class="link" data-a="bossInfo">info</button>
+       ${nem ? `<button class="nemesispill" data-a="nemesisInfo">☠ Your Nemesis waits in this act: <b>${esc(nem.name)}</b> (${nem.kind === 'elite' ? 'at an elite' : 'in a fight'}) · grudge ${nem.grudge}</button>` : ''}
+@@ -353,8 +322,7 @@
+       ${nightOf(r) ? `<div class="nightpill">🌙 Enemies +${Math.round((nightHpMult(nightOf(r)) - 1) * 100)}% HP and +${nightStr(nightOf(r))} Strength. Nights cleared: ${nightsCleared(r)}</div>
+       ${(r.terrors ?? []).length ? `<div class="nightpill terrors">${(r.terrors ?? []).map((t) => TERROR_MAP[t] ? `<span title="${esc(TERROR_MAP[t].text)}">${TERROR_MAP[t].icon} ${esc(TERROR_MAP[t].name)}</span>` : '').join(' · ')}</div>` : ''}` : ''}
+ </div>
+-    <div class="map" style="height:${total}px"><svg class="maplines" width="100%" height="${total}">${lines}</svg>${nodes}</div>
+-    <div class="legend">${Object.entries(NODE_ICON).filter(([k]) => seen.has(k)).map(([k, v]) => `<span>${v} ${NODE_NAME[k]}</span>`).join('')}${champSeen ? '<span class="champkey">🔥 Champion elite</span>' : ''}</div>
++    ${viewSpread(r, { icon: NODE_ICON, name: NODE_NAME }, !!nightOf(r))}
+   </div>`;
+ }
+ 
