@@ -242,11 +242,29 @@ function tremolo(out: Out, freqs: number[], t: number, dur: number, vol: number)
 export type Sfx =
   | 'card' | 'draw' | 'select' | 'hit' | 'bighit' | 'block' | 'heal' | 'negate' | 'death' | 'coin' | 'buy' | 'flip' | 'deal'
   | 'pack' | 'rare' | 'legend' | 'turn' | 'enemyTurn' | 'win' | 'lose' | 'click' | 'warn' | 'omen' | 'trap' | 'trapFlip'
-  | 'counter' | 'rebuttal' | 'steal' | 'summon' | 'solve' | 'fight' | 'elite' | 'bossIntro' | 'runWin' | 'runLose' | 'rest' | 'upgrade' | 'status';
+  | 'counter' | 'rebuttal' | 'steal' | 'summon' | 'solve' | 'fight' | 'elite' | 'bossIntro' | 'runWin' | 'runLose' | 'rest' | 'upgrade' | 'status'
+  // v0.16 "Every Action Sounds": the gaps found in the audit.
+  | 'slam' | 'hurt' | 'blocked' | 'shieldBreak' | 'debuff' | 'buff' | 'effective' | 'resist' | 'miss' | 'freeze' | 'swing' | 'letGo'
+  | 'gold' | 'spend' | 'item' | 'chest' | 'cardGain' | 'remove' | 'transform' | 'forge' | 'event' | 'choice' | 'shopBell' | 'campfire'
+  | 'maxhp' | 'fate' | 'skip' | 'step' | 'locked';
 
 const lastAt: Partial<Record<Sfx, number>> = {};
 
+/** True if this sound started within the last `ms` (so a follow-up can skip a sound an action already made). */
+export function playedWithin(name: Sfx, ms: number): boolean {
+  return !!ctx && (lastAt[name] ?? -9) > ctx.currentTime - ms / 1000;
+}
+
+/** A shower of coins: more coins for more gold (gold picked up, gold from events). */
+export function coins(n: number, delay = 0): void {
+  const k = Math.max(2, Math.min(9, Math.round(2 + n / 12)));
+  sfx('gold', delay);
+  for (let i = 1; i < k; i++) sfx('coin', delay + 0.05 + i * 0.055);
+}
+
 export function sfx(name: Sfx, delay = 0): void {
+  // Test hook: a headless check can set window.__sfxLog = [] to see which sounds fire.
+  (globalThis as { __sfxLog?: string[] }).__sfxLog?.push(name);
   const c = ctx;
   if (!c || !sfxBus || !unlocked || sfxLevel() <= 0 || c.state !== 'running') return;
   const t = c.currentTime + 0.005 + delay;
@@ -358,6 +376,86 @@ export function sfx(name: Sfx, delay = 0): void {
     case 'steal': osc(o, 'triangle', 1760, t, 0.18, 0.06, { slide: 0.5 }); osc(o, 'sine', 2640, t + 0.05, 0.12, 0.04); noise(o, t, 0.08, 0.05, 'highpass', 6000); break;
     case 'summon': osc(o, 'sawtooth', 140, t, 0.45, 0.07, { slide: 1.8, lp: 1500 }); noise(o, t + 0.05, 0.3, 0.07, 'lowpass', 600); break;
     case 'solve': [0, 4, 7, 11, 14].forEach((s, i) => bell(o, mtof(72 + s), t + i * 0.07, 0.7, 0.08)); break;
+    // ── v0.16 ──
+    case 'slam': // an attack card lands: the swish-and-snap plus a low thud on the table
+      noise(o, t, 0.09, 0.16, 'bandpass', 1000, { sweep: 4, q: 1.2 });
+      osc(o, 'sine', 95, t + 0.05, 0.18, 0.3, { slide: 0.5 });
+      noise(o, t + 0.05, 0.05, 0.16, 'lowpass', 1800);
+      break;
+    case 'hurt': // you take a hit: lower and rougher than hitting an enemy
+      osc(o, 'sine', jitter(95), t, 0.22, 0.4, { slide: 0.45 });
+      osc(o, 'square', 70, t, 0.12, 0.06, { slide: 0.6, lp: 500 });
+      noise(o, t, 0.12, 0.22, 'lowpass', 1300, { sweep: 0.4 });
+      break;
+    case 'blocked': // Block soaks a hit: a dull shield thunk under the clank
+      osc(o, 'sine', 180, t, 0.12, 0.22, { slide: 0.6 });
+      osc(o, 'sine', jitter(880), t, 0.16, 0.07); osc(o, 'sine', jitter(1990), t, 0.08, 0.04);
+      noise(o, t, 0.05, 0.12, 'bandpass', 1700, { q: 2.5 });
+      break;
+    case 'shieldBreak': // the hit goes through Block: metal cracks, shards fall
+      osc(o, 'sine', 160, t, 0.15, 0.25, { slide: 0.5 });
+      noise(o, t, 0.25, 0.2, 'highpass', 2500, { sweep: 0.5 });
+      [2800, 3600, 2300, 4100].forEach((f, i) => osc(o, 'sine', jitter(f, 0.06), t + 0.05 + i * 0.045, 0.08, 0.035));
+      break;
+    case 'debuff': // you weaken an enemy: a sour downward wobble
+      osc(o, 'triangle', 520, t, 0.22, 0.07, { slide: 0.55 }); osc(o, 'triangle', 553, t + 0.02, 0.22, 0.05, { slide: 0.55 });
+      break;
+    case 'buff': // you power up: a quick rising pair
+      osc(o, 'triangle', 523, t, 0.08, 0.06); osc(o, 'triangle', 784, t + 0.07, 0.14, 0.07); noise(o, t, 0.12, 0.03, 'highpass', 6000);
+      break;
+    case 'effective': // element wheel: super effective sparkle
+      [0, 7, 12, 19].forEach((sx, i) => osc(o, 'sine', mtof(84 + sx), t + i * 0.03, 0.18, 0.05));
+      noise(o, t, 0.12, 0.06, 'highpass', 7000);
+      break;
+    case 'resist': osc(o, 'sine', 210, t, 0.16, 0.12, { slide: 0.8 }); noise(o, t, 0.05, 0.06, 'lowpass', 500); break;
+    case 'miss': case 'skip': // a swing through air
+      noise(o, t, name === 'miss' ? 0.22 : 0.16, name === 'miss' ? 0.14 : 0.08, 'bandpass', 700, { sweep: 4, q: 2, a: 0.04 });
+      break;
+    case 'swing': noise(o, t, 0.16, 0.08, 'bandpass', 500, { sweep: 5, q: 2.5, a: 0.06 }); break;
+    case 'freeze': // ice crackle
+      for (let i = 0; i < 5; i++) osc(o, 'sine', jitter(3000 + i * 400, 0.1), t + i * 0.035, 0.06, 0.03);
+      noise(o, t, 0.35, 0.07, 'highpass', 5000, { sweep: 1.5 });
+      break;
+    case 'letGo': osc(o, 'triangle', 330, t, 0.1, 0.05, { slide: 0.8 }); noise(o, t, 0.05, 0.05, 'lowpass', 1200); break;
+    case 'gold': // the first coin of a pickup: bright, with a sparkle
+      osc(o, 'square', 1568, t, 0.06, 0.05, { lp: 6000 }); osc(o, 'square', 2093, t + 0.05, 0.22, 0.05, { lp: 6000 });
+      noise(o, t, 0.25, 0.03, 'highpass', 8000);
+      break;
+    case 'spend': for (let i = 0; i < 3; i++) osc(o, 'triangle', jitter(2200, 0.15), t + i * 0.04, 0.05, 0.035); break;
+    case 'item': // a keepsake is yours: rising bells over a short swell
+      [0, 4, 7, 11, 12].forEach((sx, i) => bell(o, mtof(74 + sx), t + i * 0.06, 0.7, 0.07));
+      pad(o, [mtof(62), mtof(66), mtof(69)], t, 0.8, 0.025, 2200);
+      break;
+    case 'chest': // a lid creaks, the latch pops, light spills out
+      osc(o, 'sawtooth', 140, t, 0.35, 0.04, { slide: 1.6, lp: 900 });
+      noise(o, t, 0.3, 0.05, 'bandpass', 600, { sweep: 2, q: 4 });
+      noise(o, t + 0.34, 0.04, 0.18, 'highpass', 2000);
+      osc(o, 'sine', 300, t + 0.34, 0.08, 0.12, { slide: 0.6 });
+      [0, 4, 7, 12, 16].forEach((sx, i) => bell(o, mtof(79 + sx), t + 0.42 + i * 0.05, 0.6, 0.05));
+      break;
+    case 'cardGain': // a card slides into your deck
+      noise(o, t, 0.14, 0.1, 'bandpass', 1800, { sweep: 2.5, q: 1.4, a: 0.03 });
+      osc(o, 'triangle', 660, t + 0.12, 0.08, 0.06); osc(o, 'triangle', 990, t + 0.18, 0.12, 0.05);
+      break;
+    case 'remove': // a card torn out and burned
+      noise(o, t, 0.18, 0.16, 'bandpass', 2400, { sweep: 0.5, q: 0.9 });
+      noise(o, t + 0.12, 0.5, 0.08, 'lowpass', 3000, { sweep: 0.1 });
+      osc(o, 'triangle', 300, t + 0.1, 0.4, 0.05, { slide: 0.4 });
+      break;
+    case 'transform': [0, 5, 10, 15, 20].forEach((sx, i) => osc(o, 'sine', mtof(70 + sx), t + i * 0.04, 0.2, 0.045)); noise(o, t, 0.3, 0.05, 'bandpass', 3000, { sweep: 2 }); break;
+    case 'forge': // hammer on anvil, twice
+      [0, 0.22].forEach((d) => { osc(o, 'sine', jitter(1250, 0.01), t + d, 0.4, 0.08); osc(o, 'sine', 2900, t + d, 0.2, 0.04); osc(o, 'sine', 180, t + d, 0.08, 0.18, { slide: 0.6 }); noise(o, t + d, 0.03, 0.15, 'highpass', 2500); });
+      break;
+    case 'event': // a strange hand is dealt: a harp-like glissando in phrygian
+      [0, 1, 4, 5, 7, 8, 12].forEach((sx, i) => pluck(o, mtof(64 + sx), t + i * 0.045, 0.5, 0.035));
+      break;
+    case 'choice': noise(o, t, 0.08, 0.08, 'bandpass', 2200, { sweep: 1.8, q: 1 }); osc(o, 'sine', 740, t + 0.04, 0.2, 0.05); break;
+    case 'shopBell': bell(o, 2637, t, 0.8, 0.07); bell(o, 2093, t + 0.13, 0.9, 0.06); break;
+    case 'campfire': for (let i = 0; i < 6; i++) noise(o, t + i * 0.09 + Math.random() * 0.05, 0.03, 0.06, 'bandpass', jitter(1800, 0.3), { q: 3 }); noise(o, t, 0.7, 0.04, 'lowpass', 500, { a: 0.2 }); break;
+    case 'maxhp': osc(o, 'sine', 110, t, 0.15, 0.25, { slide: 0.6 }); osc(o, 'sine', 110, t + 0.18, 0.15, 0.2, { slide: 0.6 }); [0, 7, 12].forEach((sx, i) => bell(o, mtof(72 + sx), t + 0.3 + i * 0.06, 0.5, 0.05)); break;
+    case 'fate': osc(o, 'sine', 98, t, 1.6, 0.12); osc(o, 'sine', 196 * 1.5, t, 0.9, 0.04); bell(o, mtof(67), t, 1.4, 0.06); break;
+    case 'step': noise(o, t, 0.05, 0.08, 'lowpass', 700); noise(o, t + 0.16, 0.05, 0.06, 'lowpass', 650); break;
+    case 'locked': osc(o, 'square', 150, t, 0.06, 0.05, { lp: 900 }); noise(o, t, 0.04, 0.1, 'bandpass', 1200, { q: 4 }); break;
   }
 }
 

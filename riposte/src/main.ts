@@ -38,6 +38,7 @@ import {
 } from './ui/render';
 import { app, root, ui, type View } from './ui/state';
 import * as hub from './ui/hub';
+import { kick, runFeedback } from './ui/feedback';
 import { artIcon } from './ui/art';
 import { installPx, pixify } from './ui/px';
 import { viewSpread } from './ui/map';
@@ -266,6 +267,7 @@ function render(): void {
   }
   audio.setMood(musicMood());
   soundTrack();
+  runFeedback();
 }
 
 /** v0.13: which piece of music fits the screen. Acts have themes; fights lean in; bosses get the tense variant. */
@@ -357,7 +359,7 @@ function hud(r: RunState): string {
   const hpNow = r.combat ? r.combat.player.hp : r.hp;
   return `<header class="hud">
     <span class="stat hp ${hpNow <= r.maxHp * 0.3 ? 'low' : ''}" aria-label="${hpNow} of ${r.maxHp} HP${hpNow <= r.maxHp * 0.3 ? ', low' : ''}">❤ ${hpNow}/${r.maxHp}</span>
-    <span class="stat gold">💰 ${r.gold}</span>
+    <span class="stat gold">💰 <span class="num">${r.gold}</span></span>
     <span class="stat">${nightOf(r) ? `🌙 Night ${nightOf(r)}` : `Act ${r.act}`} · ${r.floor ? `Floor ${r.floor}` : 'Start'}</span>
     <button class="icon-btn small" data-a="deck" aria-label="View deck">🂠 ${r.deck.length}</button>
     <button class="icon-btn small" data-a="menu" aria-label="Menu">☰</button>
@@ -1081,6 +1083,15 @@ const MYSTERY_TEXT: Record<string, string> = { fight: 'an ambush', elite: 'a riv
 
 function burst(host: Element, n: number, color: string): void { hub.burstAt(host as HTMLElement, n, color); }
 
+/** v0.16: a brief full-screen tint (Counter gold, trap red). */
+function screenFlash(kind: 'counter' | 'trap'): void {
+  if (app.profile.settings.reduceMotion) return;
+  const el = document.createElement('div');
+  el.className = `screenflash ${kind}`;
+  fx.appendChild(el);
+  setTimeout(() => el.remove(), 500);
+}
+
 function banner(text: string, cls: string): void {
   if (app.profile.settings.reduceMotion) return;
   const el = document.createElement('div');
@@ -1090,28 +1101,62 @@ function banner(text: string, cls: string): void {
   setTimeout(() => el.remove(), 1100 * speed() + 100);
 }
 
+const STATUS_BY_NAME = Object.fromEntries(Object.values(STATUSES).map((d) => [d.name, d]));
+
+/** v0.16: the sound for one combat event. Your hits, hits on you, buffs, debuffs, misses, freezes and steals all differ. */
+function eventSfx(ev: UiEvent, broke: boolean): audio.Sfx | 'coins' | null {
+  const n = ev.n ?? 0, s = ev.s ?? '';
+  switch (ev.t) {
+    case 'dmg': return n >= 10 ? 'bighit' : ev.who === 'p' ? 'hurt' : broke || n > 0 ? 'hit' : 'blocked';
+    case 'block': return n > 0 ? 'block' : n < 0 ? 'blocked' : null;
+    case 'heal': return 'heal';
+    case 'negate': return 'negate';
+    case 'death': return 'death';
+    case 'elem': return n > 0 ? 'effective' : 'resist';
+    case 'status': {
+      if (s.startsWith('-')) return null;
+      const d = STATUS_BY_NAME[s.replace(/^[+-]?\d+ /, '')];
+      return d?.debuff ? (ev.who === 'p' ? 'status' : 'debuff') : 'buff';
+    }
+    case 'text':
+      if (/Sun|Moon/.test(s)) return 'flip';
+      if (/gold|Cash in/.test(s)) return 'coins';
+      if (/Miss|Fled/.test(s)) return 'miss';
+      if (/froz/i.test(s)) return 'freeze';
+      if (/Stolen|Mimic/.test(s)) return 'steal';
+      if (/Summoned|Reborn|Phoenix|Exhume|Haunt/.test(s)) return 'summon';
+      if (/Thimble|Blotter/.test(s)) return 'block';
+      if (/Resonance|Echoing|Doppel|Ricochet|Judgment|Discharge|Overtime/.test(s)) return 'buff';
+      if (/Disrupted|burned|Blot|Sacrifice|Tremor/.test(s)) return 'debuff';
+      return null;
+    default: return null;
+  }
+}
+
 /** v0.13.1: the chain recap waits for a tap unless Counters are set to Automatic or Never. */
 const chainWaits = (): boolean => (app.profile.settings.counters ?? 'ask') === 'ask';
 
 async function showEvents(events: UiEvent[]): Promise<void> {
   let chain: UiEvent | null = null;
   let sounded = 0;
-  for (const ev of events) {
+  for (let i = 0; i < events.length; i++) {
+    const ev = events[i];
     if (ev.t === 'chain') { chain = ev; continue; }
-    if (sounded < 4) {
-      sounded++;
-      if (ev.t === 'dmg') audio.sfx((ev.n ?? 0) >= 10 ? 'bighit' : 'hit');
-      else if (ev.t === 'block' && (ev.n ?? 0) > 0) audio.sfx('block');
-      else if (ev.t === 'heal') audio.sfx('heal');
-      else if (ev.t === 'status' && ev.who === 'p') audio.sfx('status');
-      else if (ev.t === 'negate') audio.sfx('negate');
-      else if (ev.t === 'death') audio.sfx('death');
-      else if (ev.t === 'text' && /Sun|Moon/.test(ev.s ?? '')) audio.sfx('flip');
-      else if (ev.t === 'text' && /gold/.test(ev.s ?? '')) audio.sfx('coin');
-      else sounded--;
+    // v0.16: Block that soaks a hit and Block that breaks sound (and look) different.
+    const broke = ev.t === 'dmg' && i > 0 && events[i - 1].t === 'block' && (events[i - 1].n ?? 0) < 0 && events[i - 1].who === ev.who;
+    const soaked = ev.t === 'block' && (ev.n ?? 0) < 0 && !(events[i + 1]?.t === 'dmg' && events[i + 1].who === ev.who);
+    if (sounded < 6) {
+      const name = eventSfx(ev, broke);
+      if (name === 'coins') { audio.coins(Number(/\d+/.exec(ev.s ?? '')?.[0] ?? 10)); sounded++; }
+      else if (name) { audio.sfx(name); if (broke) audio.sfx('shieldBreak'); sounded++; }
     }
     const host = root.querySelector(`[data-who="${ev.who}"]`);
     if (!host) continue;
+    if (soaked) { kick(host, 'shield'); kick(host, 'parry'); burst(host, 8, '#6aa9e9'); }
+    if (broke) { kick(host, 'shieldbreak'); burst(host, 12, '#9cc8f5'); }
+    if (ev.t === 'status' && (ev.s ?? '').startsWith('+') && STATUS_BY_NAME[(ev.s ?? '').replace(/^[+-]?\d+ /, '')]?.debuff && ev.who !== 'p') kick(host, 'debuffed');
+    if (ev.t === 'elem' && (ev.n ?? 0) > 0) burst(host, 10, '#ffd25e');
+    if (ev.t === 'text' && /froz/i.test(ev.s ?? '')) { kick(host, 'frozen'); burst(host, 10, '#bfe6ff'); }
     if (ev.t === 'death') { host.classList.add('dying'); burst(host, 22, '#ffcf7a'); continue; }
     if (ev.t === 'elem') {
       const el = document.createElement('div');
@@ -1147,6 +1192,9 @@ async function showEvents(events: UiEvent[]): Promise<void> {
     app.chainShow = chain;
     render();
     audio.chainNotes(chain.links ?? []);
+    // v0.16: a trap springing flashes the table red; your Counter cutting in flashes it gold.
+    if (chain.links?.some((l) => l.mine && l.counter)) screenFlash('counter');
+    else if (chain.links?.some((l) => !l.mine && (l.card || l.counter))) screenFlash('trap');
     if ((chain.links?.length ?? 0) >= 3) famBark(chain.links!.length >= 5 ? '!!!' : '♪');
     await sleep(app.chainMs);
     while (app.chainShow === chain && (app.chainPin !== null || !app.chainMs)) await sleep(120);
@@ -1217,6 +1265,7 @@ async function endTurn(): Promise<void> {
     await sleep(380 * speed());
     const el = root.querySelector(`.enemy[data-who="${i}"]`);
     el?.classList.add('acting');
+    if (cb.intents(cb.s.enemies[i]).some((x) => x.icon === 'atk')) audio.sfx('swing');
     await sleep(220 * speed());
     await runAction(cb, () => cb.enemyAct(i));
     render();
@@ -1365,7 +1414,16 @@ async function flyCard(uid: number, targetIdx?: number): Promise<void> {
   ghost.animate([{ transform: 'translate(0,0) scale(1)', opacity: 1 }, { transform: `translate(${dx}px,${dy}px) scale(.45) rotate(8deg)`, opacity: 0.2 }], { duration: t, easing: 'cubic-bezier(.5,0,.8,.5)' });
   await sleep(t);
   ghost.remove();
+  // v0.16: the card lands with a shockwave where it hits.
+  const ring = document.createElement('div');
+  ring.className = `slamring ${CARDS[(combat()?.s.hand.find((c) => c.uid === uid) ?? { id: '' }).id]?.type === 'attack' ? 'atk' : ''}`;
+  ring.style.cssText = `left:${b.left + b.width / 2}px;top:${b.top + b.height / 2}px`;
+  fx.appendChild(ring);
+  setTimeout(() => ring.remove(), 450);
 }
+
+/** v0.16: attacks slam onto the table, Reactions are set face-down, everything else snaps. */
+const playSfx = (id: string): audio.Sfx => (CARDS[id].type === 'reaction' ? 'trap' : CARDS[id].type === 'attack' ? 'slam' : 'card');
 
 // ═════════════════════════ ACTIONS ═════════════════════════
 
@@ -1439,8 +1497,8 @@ const actions: Record<string, Handler> = {
   styleInfo: () => modal(`<div class="big-emoji">✦</div><h2>Style</h2><p>Style rewards playing with flair: chains of 2+ links, Negates, Counters and kills all add to it. It adds to your run score, and some Dares and quests ask for it. It never changes how a fight plays.</p><p class="muted">This fight: ✦ ${app.run?.combat?.stats.style ?? 0}</p>`),
   nemesisInfo: () => { const n = app.run?.nemesis; if (n) modal(`<div class="big-emoji">☠</div><h2>Nemesis: ${esc(n.name)}</h2><p>It beat you last time and now waits for you in this act (${n.kind === 'elite' ? 'at a rival' : 'in a fight'}). Its grudge (${n.grudge}) makes it tougher each time it wins. Beat it for <b>60 gold, a rare card and 100 score</b>. A Nemesis that wins three times running moves on.</p>`); },
   mirrorInfo: () => modal(`<div class="big-emoji">🪞</div><h2>The Reflection</h2><p>Each act map has one 🔥 <b>Champion</b> rival with a random affix. Slay ${EPILOGUE_CHAMPS} Champions in a run and, after the Act 3 boss, you may face the Reflection: one last fight against a copy of your own deck. The run already counts as won; beating it pays extra score, XP and a trophy.</p><p class="muted">Champions slain this run: ${Math.min(app.run?.champs ?? 0, EPILOGUE_CHAMPS)}/${EPILOGUE_CHAMPS}</p>`),
-  lockedChar: (el) => { const c = CHARACTERS[el.dataset.id as CharId]; toast(`🔒 ${esc(c.name)} unlocks at level ${c.unlock}. Every run earns XP, win or lose.`); },
-  pickChar: (el) => { app.charPick = el.dataset.id as CharId; app.ascPick = Math.min(app.ascPick, app.profile.ascension[app.charPick]); render(); },
+  lockedChar: (el) => { audio.sfx('locked'); const c = CHARACTERS[el.dataset.id as CharId]; toast(`🔒 ${esc(c.name)} unlocks at level ${c.unlock}. Every run earns XP, win or lose.`); },
+  pickChar: (el) => { audio.sfx('select'); app.charPick = el.dataset.id as CharId; app.ascPick = Math.min(app.ascPick, app.profile.ascension[app.charPick]); render(); },
   asc: (el) => {
     const max = app.profile.ascension[app.charPick];
     app.ascPick = Math.max(0, Math.min(max, app.ascPick + Number(el.dataset.d)));
@@ -1518,7 +1576,7 @@ const actions: Record<string, Handler> = {
     if (!r.combat && useOmenOnMap(r, i)) { audio.sfx('heal'); persist(); render(); }
     else render();
   },
-  omenDrop: (el) => { discardOmen(app.run!, Number(el.dataset.i)); app.modal = null; persist(); render(); },
+  omenDrop: (el) => { audio.sfx('remove'); discardOmen(app.run!, Number(el.dataset.i)); app.modal = null; persist(); render(); },
   buyOmen: (el) => {
     const r = app.run!, i = Number(el.dataset.i), it = r.shop!.omens![i];
     if (!it || it.sold) return;
@@ -1580,7 +1638,7 @@ const actions: Record<string, Handler> = {
   travel: (el) => {
     const r = app.run!;
     travel(r, Number(el.dataset.row), Number(el.dataset.col));
-    audio.sfx('flip');
+    audio.sfx('flip'); audio.sfx('step', 0.08);
     app.sel = null;
     app.rewardCardSel = null;
     persist();
@@ -1639,7 +1697,13 @@ const actions: Record<string, Handler> = {
   endTurn: () => endTurn(),
   dismissChain: () => { app.chainShow = null; app.chainPin = null; render(); },
   chainLink: (el) => { const i = Number(el.dataset.i); app.chainPin = app.chainPin === i ? null : i; render(); },
-  counterPick: (el) => { app.counterAsk?.resolve(Number(el.dataset.uid)); },
+  counterPick: (el) => {
+    const uid = Number(el.dataset.uid);
+    if (!app.counterAsk) return;
+    // v0.16: answering is instant and loud; letting it resolve is a soft card laid down.
+    if (uid) { audio.sfx('counter'); screenFlash('counter'); } else audio.sfx('letGo');
+    app.counterAsk.resolve(uid);
+  },
   caFocus: (el) => { if (app.counterAsk) { app.counterAsk.focus = Number(el.dataset.i); render(); } },
   caSel: (el) => { if (app.counterAsk) { const u = Number(el.dataset.uid); app.counterAsk.sel = u; render(); } },
   elemInfo: () => elemInfo(),
@@ -1684,7 +1748,7 @@ const actions: Record<string, Handler> = {
   takeGold: (el) => { burst(el, 12, '#e8b04a'); takeGold(app.run!); persist(); render(); },
   takeRelic: () => { takeRelic(app.run!); persist(); render(); },
   bossRelic: (el) => { takeRelic(app.run!, el.dataset.id); persist(); render(); },
-  rewardSel: (el) => { app.rewardCardSel = el.dataset.id!; render(); },
+  rewardSel: (el) => { app.rewardCardSel = el.dataset.id!; audio.sfx('select'); render(); },
   takeCard: () => {
     const r = app.run!;
     const sel = app.rewardCardSel;
@@ -1697,8 +1761,8 @@ const actions: Record<string, Handler> = {
     persist(); render();
   },
   dealerAnswer: (el) => { const r = app.run!; if (answerDealer(r, el.dataset.n === '1')) audio.sfx(el.dataset.n === '1' ? 'negate' : 'warn'); persist(); render(); },
-  skipCard: () => { takeCard(app.run!, null); app.rewardCardSel = null; persist(); render(); },
-  reroll: () => { if (rerollCards(app.run!)) { app.rewardCardSel = null; persist(); render(); } },
+  skipCard: () => { audio.sfx('skip'); takeCard(app.run!, null); app.rewardCardSel = null; persist(); render(); },
+  reroll: () => { if (rerollCards(app.run!)) { audio.sfx('deal'); app.rewardCardSel = null; persist(); render(); } },
   proceed: () => {
     const r = app.run!;
     const go = () => {
@@ -1757,6 +1821,7 @@ const actions: Record<string, Handler> = {
     const i = Number(el.dataset.i);
     const opt = EVENT_MAP[r.event!.id].options[i];
     const done = () => { persist(); render(); arrived(r); };
+    audio.sfx('choice');
     if (opt.pick) {
       const titles: Record<PickKind, string> = { upgrade: 'Upgrade a card', remove: 'Remove a card', duplicate: 'Duplicate a card', transform: 'Transform a card', sigil: 'Stamp a sigil on a card' };
       openPicker(opt.pick, titles[opt.pick], deckFor(opt.pick), (uid) => { chooseEvent(r, i, uid); done(); });
@@ -1783,13 +1848,14 @@ const actions: Record<string, Handler> = {
   pickCancel: () => { app.picker = null; app.forgeMod = app.view === 'forge' ? app.forgeMod : null; render(); },
 
   // end
-  mint: () => { if (app.endRun) { mintLegacy(app.profile, app.endRun); app.minted = true; eco.checkAchievements(app.profile); persist(); render(); } },
+  mint: () => { if (app.endRun) { audio.sfx('upgrade'); mintLegacy(app.profile, app.endRun); app.minted = true; eco.checkAchievements(app.profile); persist(); render(); } },
   keep: (el) => {
     const id = el.dataset.id!;
     if (!app.result || app.kept.length >= app.result.keep || app.kept.includes(id)) return;
     app.kept.push(id);
     eco.addCard(app.profile, id);
     burst(el, 14, '#e8b04a');
+    audio.sfx('cardGain');
     for (const a of eco.checkAchievements(app.profile)) toast(`🏆 <b>${esc(ACHIEVEMENTS.find((x) => x.id === a)!.name)}</b>`, 'ach');
     persist();
     render();
@@ -1829,7 +1895,7 @@ async function playSel(targetIdx?: number): Promise<void> {
   app.busy = true;
   await flyCard(uid, CARDS[c.id].target ? tgt : undefined);
   app.busy = false;
-  audio.sfx(CARDS[c.id].type === 'reaction' ? 'trap' : 'card');
+  audio.sfx(playSfx(c.id));
   app.busy = true;
   await runAction(cb, () => { cb.play(uid, tgt); });
   app.busy = false;
@@ -1845,7 +1911,7 @@ let swallowClick = false;
 // Mobile browsers only allow sound after a gesture: any tap, touch or key unlocks it (and starts the music).
 for (const ev of ['pointerdown', 'touchend', 'keydown'] as const) window.addEventListener(ev, () => { audio.unlock(); }, { capture: true, passive: true });
 /** v0.13: buttons with their own sound (or none) skip the generic click. */
-const QUIET_CLICK = new Set(['card', 'play', 'target', 'travel', 'counterPick', 'buyCardYes', 'buyRelicYes', 'buyOmenYes', 'chainLink', 'caSel', 'caFocus']);
+const QUIET_CLICK = new Set(['rewardSel', 'skipCard', 'reroll', 'eventOpt', 'omenDrop', 'mint', 'lockedChar', 'pickChar', 'card', 'play', 'target', 'travel', 'counterPick', 'buyCardYes', 'buyRelicYes', 'buyOmenYes', 'chainLink', 'caSel', 'caFocus']);
 
 root.addEventListener('pointerdown', (e) => {
   const el = (e.target as HTMLElement).closest<HTMLElement>('.hand .card');
@@ -1942,7 +2008,7 @@ window.addEventListener('pointerup', (e) => {
   if (!cb.canPlay(c)) { toast(CARDS[c.id].unplayable ? 'This card cannot be played.' : 'Not enough energy', 'warn'); return; }
   app.sel = d.uid;
   if (!app.profile.settings.reduceMotion) burst(d.target !== null ? root.querySelector(`.enemy[data-who="${d.target}"]`)! : root.querySelector('.enemies')!, 8, '#e8b04a');
-  audio.sfx(CARDS[c.id].type === 'reaction' ? 'trap' : 'card');
+  audio.sfx(playSfx(c.id));
   void (async () => {
     app.busy = true;
     await runAction(cb, () => { cb.play(d.uid, target); });

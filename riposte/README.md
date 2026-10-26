@@ -17,6 +17,10 @@ _Formerly **Riposte** (renamed in v0.14.1 because the name was taken; the projec
   3. **Legacy → Echo:** your best run decks become ghost opponents (offline now, other players' decks once a server exists).
 - **Business:** free Act 1 demo → $6.99 one-time unlock, $3.99 expansions, cosmetics only; no loot boxes or energy. See [docs/03-MOBILE-BUSINESS-AND-BUILD-PLAN.md](docs/03-MOBILE-BUSINESS-AND-BUILD-PLAN.md).
 
+## New in v0.16 "Every Action Sounds"
+
+Nothing happens silently any more. Hits on you sound different from your hits; Block that soaks a hit thunks and flashes blue, Block that breaks cracks; Counters ring and flash gold the moment you press them; traps flash red; attack cards slam down with a shockwave. Outside fights, gold showers coins while the HUD number counts up, keepsakes pop into the bar with a fanfare, chests creak open and burst, cards slide into the deck, and the Merchant, Candle, forge and events each greet you with their own sound. 29 new synthesized effects (67 in all, still no audio files), all under the Effects setting and Reduce motion. Full audit table: [docs/21-V16-EVERY-ACTION-SOUNDS.md](docs/21-V16-EVERY-ACTION-SOUNDS.md).
+
 ## New in v0.15.1 "Sharp Pixels"
 
 Icons now land on whole device pixels on 2x and 3x phones (no more uneven 3- and 4-px columns), nothing scales or tilts them at rest, every icon has a closed 1 px outline, dark icons get a rim light, and the Merchant is a travelling trader instead of a shopping cart. Notes: [docs/20-V15-1-SHARP-PIXELS.md](docs/20-V15-1-SHARP-PIXELS.md).
